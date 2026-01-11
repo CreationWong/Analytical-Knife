@@ -1,9 +1,21 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { MantineProvider, createTheme } from '@mantine/core';
+import '@mantine/core/styles.css';
+import { Notifications } from '@mantine/notifications';
+import '@mantine/notifications/styles.css';
+import App from './App';
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+const theme = createTheme({
+    primaryColor: 'blue',
+    // 定义全局样式
+});
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+        <MantineProvider theme={theme}>
+            <Notifications position="top-right" zIndex={2000} />
+            <App />
+        </MantineProvider>
+    </React.StrictMode>
 );

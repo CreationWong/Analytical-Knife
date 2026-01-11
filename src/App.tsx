@@ -1,51 +1,50 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { AppShell, Burger, NavLink, Text, ScrollArea } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { useState, Suspense } from 'react';
+import { TOOLS_REGISTRY } from './registry';
+import {ToolErrorBoundary} from "./components/ErrorBoundary.tsx";
+import {Loader} from "lucide-react";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+export default function App() {
+    const [opened, { toggle }] = useDisclosure();
+    const [activeId, setActiveId] = useState(TOOLS_REGISTRY[0].id);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+    const activeTool = TOOLS_REGISTRY.find(t => t.id === activeId);
 
-  return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    return (
+        <AppShell
+            header={{ height: 60 }}
+            navbar={{ width: 260, breakpoint: 'sm', collapsed: { mobile: !opened } }}
+            padding="md"
+        >
+            <AppShell.Header p="md" style={{ display: 'flex', alignItems: 'center' }}>
+                <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+                <Text size="lg" fw={700}>Analytical Knife</Text>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+            </AppShell.Header>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
-  );
+            <AppShell.Navbar p="xs">
+                <ScrollArea>
+                    {TOOLS_REGISTRY.map((tool) => (
+                        <NavLink
+                            key={tool.id}
+                            active={tool.id === activeId}
+                            label={tool.name}
+                            description={tool.description}
+                            leftSection={<tool.icon size="1.2rem" />}
+                            onClick={() => setActiveId(tool.id)}
+                        />
+                    ))}
+                </ScrollArea>
+            </AppShell.Navbar>
+
+            <AppShell.Main>
+                <ToolErrorBoundary key={activeId}>
+                    <Suspense fallback={<Loader />}>
+                        {activeTool && <activeTool.component />}
+                    </Suspense>
+                </ToolErrorBoundary>
+            </AppShell.Main>
+        </AppShell>
+    );
 }
-
-export default App;
