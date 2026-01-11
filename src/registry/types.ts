@@ -5,6 +5,6 @@ export interface ToolDefinition {
     name: string;        // 显示名称
     description: string; // 简短描述
     icon: React.ElementType;
-    path: string;
+    path: string | null;
     component: React.LazyExoticComponent<any>; // 懒加载组件
 }
