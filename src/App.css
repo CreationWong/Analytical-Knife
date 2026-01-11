@@ -6,6 +6,12 @@
   font-display: swap;
 }
 
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  color: transparent
+}
+
 :root {
   font-family: 'Source Han Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 16px;
@@ -114,4 +120,13 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
+}
+
+.mantine-AppShell-main {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mantine-AppShell-main::-webkit-scrollbar {
+  display: none;
 }
