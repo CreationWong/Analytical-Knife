@@ -6,12 +6,12 @@ import {
     Paper,
     Text,
     Group,
-    Alert,
     ActionIcon,
     Tooltip,
 } from '@mantine/core';
 import { IconFlag3, IconCopy, IconListCheck } from '@tabler/icons-react';
 import { useClipboard } from '@mantine/hooks';
+import {showNotification} from "../../utils/notifications.ts";
 
 // 提取单个 flag 的 {} 内容
 const extractContent = (flag: string): string | null => {
@@ -32,6 +32,7 @@ export default function BatchFlagReformatter() {
     useEffect(() => {
         const lines = inputFlags.split('\n');
         const validFlags: string[] = [];
+        let invalidCount = 0;
 
         for (const line of lines) {
             const trimmed = line.trim();
@@ -40,8 +41,21 @@ export default function BatchFlagReformatter() {
             const content = extractContent(trimmed);
             if (content !== null) {
                 validFlags.push(`${newPrefix.trim()}{${content}}`);
+            } else {
+                invalidCount++;
             }
-            // 无效行直接忽略（不输出）
+        }
+
+        setOutputText(validFlags.join('\n'));
+
+        // 只在有无效行时提示
+        if (invalidCount > 0) {
+            showNotification({
+                type: 'warning',
+                title: '部分 flag 格式无效',
+                message: `已跳过 ${invalidCount} 行无法识别的格式。`,
+                autoClose: 3000,
+            });
         }
 
         setOutputText(validFlags.join('\n'));
@@ -59,7 +73,8 @@ export default function BatchFlagReformatter() {
                     placeholder={`例如：FLAG{hello}`}
                     value={inputFlags}
                     onChange={(e) => setInputFlags(e.currentTarget.value)}
-                    minRows={6}
+                    minRows={4}
+                    autosize
                     styles={{ input: { fontFamily: 'monospace' } }}
                 />
             </Paper>
@@ -68,7 +83,7 @@ export default function BatchFlagReformatter() {
             <Paper p="md" radius="md" withBorder>
                 <Group align="center" mb="sm">
                     <IconFlag3 size={20} />
-                    <Text fw={600}>新 Flag 前缀（不含花括号）</Text>
+                    <Text fw={600}>新 Flag 前缀</Text>
                 </Group>
                 <TextInput
                     placeholder="例如：CTF"
@@ -97,6 +112,7 @@ export default function BatchFlagReformatter() {
                         value={outputText}
                         readOnly
                         minRows={6}
+                        autosize
                         styles={{
                             input: {
                                 fontFamily: 'monospace',
@@ -107,10 +123,6 @@ export default function BatchFlagReformatter() {
                     />
                 </Paper>
             )}
-
-            <Alert color="blue" variant="light" icon={<IconFlag3 size={16} />}>
-                仅输出格式有效的 flag。空行和无效行将被自动忽略。
-            </Alert>
         </Stack>
     );
 }
