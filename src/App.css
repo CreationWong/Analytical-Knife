@@ -1,12 +1,13 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
+@font-face {
+  font-family: 'Source Han Mono';
+  src: url('public/fonts/SourceHanMono.ttc');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
-}
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Source Han Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;

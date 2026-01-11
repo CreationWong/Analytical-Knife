@@ -3,6 +3,7 @@ import React from 'react';
 
 interface ErrorOptions {
     title?: string;
+    message?: string;
     isWarning?: boolean;      // true 为黄色警告，false 为红色错误
     autoReload?: boolean;     // 是否自动重载
     reloadDelay?: number;     // 自动重载的延迟时间（毫秒），默认为 3000ms
@@ -15,6 +16,7 @@ interface ErrorOptions {
 export const handleAppError = (error: any, options: ErrorOptions = {}) => {
     const {
         title = options.isWarning ? '操作警告' : '运行出错',
+        message: customMessage,
         isWarning = false,
         autoReload = false,
         reloadDelay = 3000, // 默认 3 秒
@@ -23,9 +25,7 @@ export const handleAppError = (error: any, options: ErrorOptions = {}) => {
 
     console.error('[App Error]:', error);
 
-    const message = typeof error === 'string'
-        ? error
-        : error?.message || '未知错误!';
+    const message = customMessage || (typeof error === 'string' ? error : error?.message || '未知错误!');
 
     // 自动重载逻辑
     if (autoReload) {

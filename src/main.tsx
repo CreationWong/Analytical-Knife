@@ -7,8 +7,14 @@ import '@mantine/notifications/styles.css';
 import App from './App';
 
 const theme = createTheme({
-    primaryColor: 'blue',
+    // 全局字体设置
+    fontFamily: 'Source Han Mono, sans-serif',
+    fontFamilyMonospace: 'Source Han Mono, Monaco, Consolas, monospace',
+
     // 定义全局样式
+    primaryColor: 'blue',
+
+    // TODO: 优化全局样式
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -17,7 +17,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         name: 'Base64 转换',
         description: '字符串与 Base64 互转',
         icon: IconLockCode,
-        path: 'TextTools/Base64Tool',
+        path: '编码处理/Base64Tool',
         component: lazy(() => import('../tools/TextTools/Base64Tool')),
     },
 ];

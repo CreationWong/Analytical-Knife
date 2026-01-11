@@ -170,8 +170,7 @@ export default function App() {
                             variant="gradient"
                             gradient={{ from: 'blue', to: 'cyan' }}
                             style={{
-                                opacity: desktopOpened ? 1 : 0,
-                                display: desktopOpened ? 'block' : 'none',
+                                display: 'block',
                                 whiteSpace: 'nowrap',
                                 transition: 'opacity 0.2s ease',
                                 userSelect: 'none' // 防止文字被意外选中
