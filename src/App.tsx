@@ -1,4 +1,4 @@
-import { useState, Suspense, useMemo } from 'react';
+import React, { useState, Suspense, useMemo } from 'react';
 import {
     AppShell,
     Burger,
@@ -21,6 +21,7 @@ import {
 } from '@tabler/icons-react';
 import { TOOLS_REGISTRY } from './registry';
 import { ToolErrorBoundary } from './components/ErrorBoundary';
+import { PARENT_ICONS } from './registry/sidebarIcons.ts';
 
 // 树节点接口定义
 interface TreeNode {
@@ -97,10 +98,18 @@ export default function App() {
                         // 仅在展开且是工具时显示描述
                         description={desktopOpened && isLeaf ? tool?.description : null}
                         leftSection={
-                            tool?.icon ? (
-                                <tool.icon size="1.2rem" stroke={1.5} />
+                            isLeaf ? (
+                                tool?.icon ? (
+                                    <tool.icon size="1.2rem" stroke={1.5} />
+                                ) : (
+                                    <IconLayoutDashboard size="1.2rem" stroke={1.5} />
+                                )
                             ) : (
-                                <IconLayoutDashboard size="1.1rem" stroke={1.5} />
+                                // 父节点：根据 key（路径段名）查图标
+                                React.createElement(
+                                    PARENT_ICONS[key] || IconLayoutDashboard,
+                                    { size: "1.2rem", stroke: 1.5 }
+                                )
                             )
                         }
                         active={isLeaf && activeId === node.toolId}
