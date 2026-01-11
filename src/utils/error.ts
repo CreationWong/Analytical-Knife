@@ -12,6 +12,31 @@ interface ErrorOptions {
 
 /**
  * 统一异常处理器
+ *
+ * 封装应用中的错误展示逻辑，支持：
+ * - 区分警告（warning）与错误（error）
+ * - 手动重试（带“立即刷新重试”按钮）
+ * - 自动重载（带倒计时提示）
+ * - 自定义重试逻辑（通过 `onRetry`）
+ *
+ * @param {any} error - 原始错误对象（可以是 Error 实例、字符串或任意值）
+ * @param {ErrorOptions} [options={}] - 错误处理配置
+ *
+ * @example
+ * // 普通错误
+ * handleAppError(new Error('API 请求失败'));
+ *
+ * // 警告（不阻断）
+ * handleAppError('输入格式不规范', { isWarning: true });
+ *
+ * // 自动重连
+ * handleAppError(err, { autoReload: true, reloadDelay: 5000 });
+ *
+ * // 自定义重试（如重新请求数据）
+ * handleAppError(err, {
+ *   title: '加载失败',
+ *   onRetry: () => refetchData(),
+ * });
  */
 export const handleAppError = (error: any, options: ErrorOptions = {}) => {
     const {
