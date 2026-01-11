@@ -8,7 +8,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         name: 'Base64 转换',
         description: '字符串与 Base64 互转',
         icon: Hash,
-        category: 'Text',
+        path: 'TextTools/Base64Tool',
         component: lazy(() => import('../tools/TextTools/Base64Tool')),
     },
 ];
