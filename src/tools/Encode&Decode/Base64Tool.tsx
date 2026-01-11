@@ -234,7 +234,7 @@ export default function Base64Tool() {
                             </Text>
                             {mode === Mode.ENCODE && input.length > 0 && (
                                 <Text size="sm" c="dimmed">
-                                    编码增加: {Math.round((output.length / input.length - 1) * 100)}%
+                                    增加量: {Math.round((output.length / input.length - 1) * 100)}%
                                 </Text>
                             )}
                         </Group>
@@ -256,7 +256,6 @@ export default function Base64Tool() {
         // 全局错误处理
         handleAppError(err, {
             title: "Base64 工具错误",
-            message: "工具运行时发生异常",
             autoReload: true,
             reloadDelay: 3000,
         });
