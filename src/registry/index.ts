@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import { ToolDefinition } from './types';
-import {IconCode, IconInfoCircle, IconListCheck, IconLockCode, IconTerminal2} from "@tabler/icons-react";
+import {IconCode, IconInfoCircle, IconKey, IconListCheck, IconLockCode, IconTerminal2} from "@tabler/icons-react";
 
 export const TOOLS_REGISTRY: ToolDefinition[] = [
     {
@@ -19,6 +19,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconLockCode,
         path: '编码处理/base64',
         component: lazy(() => import('../tools/Encode&Decode/Base64Tool')),
+    },
+
+    {
+        id: 'commonModulusAttack',
+        name: '共模攻击',
+        description: '利用相同模数 N、不同公钥指数的两个 RSA 密文恢复明文',
+        icon: IconKey,
+        path: '密码分析/RSA/commonModulusAttack',
+        component: lazy(() => import('../tools/Crypto/CommonModulusAttack')),
     },
 
     {
