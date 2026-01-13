@@ -48,12 +48,21 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
     },
 
     {
-        id: 'payloadGenerator',
-        name: '一句话木马生成器',
-        description: '支持自定义参数的 WebShell 模板生成器',
+        id: 'payloadWebshellGenerator',
+        name: 'Webshell 生成器',
+        description: '支持多种编程语言、免杀混淆及工具适配的 Webshell 生成器',
         icon: IconCode,
-        path: '生成器/Payload/payloadGenerator',
-        component: lazy(() => import('../tools/Security/PayloadGenerator')),
+        path: '生成器/Payload/payloadWebshellGenerator',
+        component: lazy(() => import('../tools/Security/PayloadWebshellGenerator.tsx')),
+    },
+
+    {
+        id: 'reverseShellGenerator',
+        name: '反弹 Shell 生成器',
+        description: '快速生成不同环境下的反弹 Shell 命令',
+        icon: IconTerminal2,
+        path: '生成器/Payload/reverseShellGenerator',
+        component: lazy(() => import('../tools/Security/ReverseShellGenerator')),
     },
 
     {

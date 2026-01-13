@@ -9,7 +9,7 @@ import {
     Group,
     Text,
     Divider,
-    Switch
+    Switch, Badge
 } from '@mantine/core';
 import { IconCopy, IconRefresh, IconBug, IconLock } from '@tabler/icons-react';
 import { useClipboard } from '@mantine/hooks';
@@ -94,6 +94,15 @@ export default function XssGenerator() {
                         <IconBug size={20} color="var(--mantine-color-red-6)" />
                         <Text fw={600}>XSS Payload 生成器</Text>
                     </Group>
+                    <Badge
+                        variant="dot"
+                        color="green"
+                        size="md"
+                        radius="xl"
+                        styles={{ root: { textTransform: 'none' } }}
+                    >
+                        模板库: V1.0
+                    </Badge>
                 </Group>
 
                 <Divider />
