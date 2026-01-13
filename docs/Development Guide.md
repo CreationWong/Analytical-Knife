@@ -63,7 +63,7 @@ export default function MyNewTool() {
   name: '我的新工具',
   description: '这是一个演示插件开发的示例工具',
   icon: IconPlug,
-  path: '演示分类/子项',
+  path: '分类/子项/ID',
   component: lazy(() => import('../tools/Example/MyNewTool')),
 },
 ```
@@ -178,3 +178,6 @@ import { invoke } from '@tauri-apps/api/core';
 
 const result = await invoke('my_rust_command', { payload: data });
 ```
+
+## 5. 深色模式
+添加对深色模式支持。
