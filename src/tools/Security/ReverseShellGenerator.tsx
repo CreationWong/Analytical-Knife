@@ -159,7 +159,7 @@ export default function ReverseShellGenerator() {
                 <Group justify="space-between" mt="md">
                     <Stack gap={0}>
                         <Text size="xs" c="dimmed">本地监听命令:</Text>
-                        <Code color="blue.1">nc -lvnp {port}</Code>
+                        <Code color="var(--mantine-color-green)">nc -lvnp {port}</Code>
                     </Stack>
                     <Group>
                         <Button

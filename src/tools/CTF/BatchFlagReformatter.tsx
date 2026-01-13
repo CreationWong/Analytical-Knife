@@ -116,7 +116,6 @@ export default function BatchFlagReformatter() {
                         styles={{
                             input: {
                                 fontFamily: 'monospace',
-                                backgroundColor: '#f8f9fa',
                                 fontSize: '0.95em',
                             },
                         }}

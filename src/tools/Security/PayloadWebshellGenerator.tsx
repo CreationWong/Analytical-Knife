@@ -145,7 +145,7 @@ export default function WebshellGenerator() {
                             readOnly
                             autosize
                             minRows={4}
-                            styles={{ input: { fontFamily: 'monospace', fontSize: '12px', backgroundColor: '#fdfdfe' } }}
+                            styles={{ input: { fontFamily: 'monospace', fontSize: '12px', } }}
                         />
                     </Stack>
                 </Stack>

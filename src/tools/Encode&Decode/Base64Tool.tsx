@@ -212,7 +212,7 @@ export default function Base64Tool() {
                         styles={{
                             input: {
                                 fontFamily: mode === Mode.ENCODE ? 'monospace' : 'inherit',
-                                backgroundColor: 'var(--mantine-color-gray-0)',
+                                backgroundColor: 'var(--mantine-color-gray)',
                                 fontSize: mode === Mode.ENCODE ? '0.9em' : 'inherit',
                                 cursor: 'text'
                             }
@@ -241,7 +241,7 @@ export default function Base64Tool() {
                     )}
 
                     {/* 使用说明 */}
-                    <Paper p="sm" bg="blue.0" withBorder>
+                    <Paper p="sm"  withBorder>
                         <Text size="sm">
                             {mode === Mode.ENCODE
                                 ? 'Base64 编码会将数据大小增加约 33%，常用于在文本协议（如 JSON、XML）中传输二进制数据。'

@@ -6,7 +6,7 @@ import {
     IconInfoCircle,
     IconKey,
     IconListCheck,
-    IconLockCode,
+    IconLockCode, IconSettings,
     IconTerminal2
 } from "@tabler/icons-react";
 
@@ -18,6 +18,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconInfoCircle,
         path: null,
         component: lazy(() => import('../components/About')),
+    },
+
+    {
+        id: 'UISettings',
+        name: '界面设置',
+        description: '配置界面',
+        icon: IconSettings,
+        path: '设置/UISettings',
+        component: lazy(() => import('../components/./UISettings')),
     },
 
     {

@@ -220,7 +220,7 @@ export default function App() {
             </AppShell.Navbar>
 
             {/* 主内容区域 */}
-            <AppShell.Main bg="var(--mantine-color-gray-0)">
+            <AppShell.Main bg="var(--mantine-color-body)">
                 <ToolErrorBoundary key={activeId}>
                     <Suspense
                         fallback={

@@ -123,7 +123,7 @@ export default function XssGenerator() {
                     />
                 </Group>
 
-                <Group justify="space-between" bg="var(--mantine-color-gray-0)" p="xs" style={{ borderRadius: '4px' }}>
+                <Group justify="space-between" bg="var(--mantine-color-gray)" p="xs" style={{ borderRadius: '4px' }}>
                     <Text size="xs" c="dimmed">
                         <IconLock size={12} style={{ marginRight: 4 }} />
                         绕过技术：开启后将字符串转换为 <code>String.fromCharCode</code>
@@ -147,8 +147,8 @@ export default function XssGenerator() {
                             input: {
                                 fontFamily: 'monospace',
                                 fontSize: '13px',
-                                color: 'var(--mantine-color-red-9)',
-                                backgroundColor: 'var(--mantine-color-gray-1)'
+                                color: 'var(--mantine-color-red)',
+                                backgroundColor: 'var(--mantine-color-gray)'
                             }
                         }}
                     />
