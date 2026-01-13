@@ -1,5 +1,6 @@
 import {
     IconLayoutDashboard, IconWorld, IconTerminal2, IconWand, IconCode, IconTrophy, IconTools, IconLockCode, IconKey,
+    IconBug,
 } from '@tabler/icons-react';
 
 // 定义图标组件类型
@@ -7,6 +8,7 @@ type IconComponent = React.ComponentType<{ size?: string | number; stroke?: numb
 
 // 路径段名称 → 图标组件 的映射表
 export const PARENT_ICONS: Record<string, IconComponent> = {
+
     '编码处理':IconLockCode,
 
     '密码分析':IconKey,
@@ -14,11 +16,12 @@ export const PARENT_ICONS: Record<string, IconComponent> = {
 
     // 网络 & API
     '网络工具': IconWorld,
-    'API 调试': IconTerminal2,
+    'API': IconTerminal2,
 
     // 生成器
     '生成器': IconWand,
     'Payload': IconCode,
+    '漏洞测试': IconBug,
 
     // CTF
     'CTF': IconTrophy,

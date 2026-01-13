@@ -1,6 +1,14 @@
 import { lazy } from 'react';
 import { ToolDefinition } from './types';
-import {IconCode, IconInfoCircle, IconKey, IconListCheck, IconLockCode, IconTerminal2} from "@tabler/icons-react";
+import {
+    IconBug,
+    IconCode,
+    IconInfoCircle,
+    IconKey,
+    IconListCheck,
+    IconLockCode,
+    IconTerminal2
+} from "@tabler/icons-react";
 
 export const TOOLS_REGISTRY: ToolDefinition[] = [
     {
@@ -35,7 +43,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         name: 'Curl 命令生成器',
         description: 'curl 构造器',
         icon: IconTerminal2,
-        path: '网络工具/API 调试/curlCommandGenerator',
+        path: '网络工具/API/curlCommandGenerator',
         component: lazy(() => import('../tools/Network/CurlCommandGenerator')),
     },
 
@@ -46,6 +54,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconCode,
         path: '生成器/Payload/payloadGenerator',
         component: lazy(() => import('../tools/Security/PayloadGenerator')),
+    },
+
+    {
+        id: 'xssGenerator',
+        name: 'XSS 生成器',
+        description: '快速生成常见的跨站脚本攻击测试 Payload',
+        icon: IconBug,
+        path: '生成器/漏洞测试/xssGenerator',
+        component: lazy(() => import('../tools/Security/XSSGenerator.tsx')),
     },
 
     {
