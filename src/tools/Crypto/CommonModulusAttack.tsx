@@ -5,9 +5,9 @@ import {
     Textarea,
     Button,
     Group,
-    Code,
+    Code, Text,
 } from '@mantine/core';
-import { IconKey, IconShieldLock } from '@tabler/icons-react';
+import { IconKey, IconShieldLock} from '@tabler/icons-react';
 import { showNotification } from '../../utils/notifications';
 import { handleAppError } from '../../utils/error';
 import { invoke } from '@tauri-apps/api/core';
@@ -56,11 +56,18 @@ export default function CommonModulusAttack() {
                 message: '已成功恢复明文！',
             });
         } catch (err) {
-            handleAppError(err, {
-                title: '共模攻击失败',
-                message: err instanceof Error ? err.message : String(err),
-                isWarning: false,
-            });
+            if (err instanceof Error) {
+                handleAppError(err, {
+                    title: '共模攻击出错',
+                    isWarning: false,
+                });
+            } else {
+                showNotification({
+                    type: 'error',
+                    title: '共模攻击失败',
+                    message: String(err),
+                });
+            }
         } finally {
             setLoading(false);
         }
@@ -69,6 +76,13 @@ export default function CommonModulusAttack() {
     return (
         <Stack gap="md">
             <Paper p="md" withBorder>
+                <Group justify="space-between">
+                    <Group gap="xs">
+                        <Text fw={600}>共模攻击</Text>
+                    </Group>
+                </Group>
+                <br/>
+
                 <Stack>
                     <Textarea
                         label="模数 N（十六进制或十进制）"

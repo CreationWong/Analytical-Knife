@@ -34,12 +34,12 @@ pub fn recover_plaintext(
 ) -> Result<Vec<u8>, String> {
     let (g, s, t) = extended_gcd(e1, e2);
     if !g.is_one() {
-        return Err("e1 与 e2 不互质，无法进行共模攻击".into());
+        return Err("e1 与 e2 不互质，无法进行共模攻击!".into());
     }
 
     let modulus = n;
-    let c1_inv = c1.modinv(modulus).ok_or("c1 在模 N 下不可逆")?;
-    let c2_inv = c2.modinv(modulus).ok_or("c2 在模 N 下不可逆")?;
+    let c1_inv = c1.modinv(modulus).ok_or("c1 在模 N 下不可逆!")?;
+    let c2_inv = c2.modinv(modulus).ok_or("c2 在模 N 下不可逆!")?;
 
     let part1 = if s >= 0 {
         c1.modpow(&BigUint::from(s as u64), modulus)
