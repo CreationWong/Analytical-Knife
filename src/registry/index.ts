@@ -2,7 +2,7 @@ import { lazy } from 'react';
 import { ToolDefinition } from './types';
 import {
     IconBug,
-    IconCode,
+    IconCode, IconHeartHandshake,
     IconInfoCircle,
     IconKey,
     IconListCheck,
@@ -36,6 +36,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconLockCode,
         path: '编码处理/base64',
         component: lazy(() => import('../tools/Encode&Decode/Base64Tool')),
+    },
+
+    {
+        id: 'coreValuesCrypto',
+        name: '社会主义核心价值观编码',
+        description: '将文本转换成社会主义核心价值观',
+        icon: IconHeartHandshake,
+        path: '编码处理/特殊编码/coreValuesCrypto',
+        component: lazy(() => import('../tools/Encode&Decode/CoreValuesTool.tsx')),
     },
 
     {

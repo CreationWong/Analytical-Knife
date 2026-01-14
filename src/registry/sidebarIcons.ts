@@ -1,6 +1,6 @@
 import {
     IconLayoutDashboard, IconWorld, IconTerminal2, IconWand, IconCode, IconTrophy, IconTools, IconLockCode, IconKey,
-    IconBug, IconSettings,
+    IconBug, IconSettings, IconJoker,
 } from '@tabler/icons-react';
 
 // 定义图标组件类型
@@ -11,6 +11,7 @@ export const PARENT_ICONS: Record<string, IconComponent> = {
     '设置': IconSettings,
 
     '编码处理':IconLockCode,
+    '特殊编码': IconJoker,
 
     '密码分析':IconKey,
     'RSA':IconKey,
