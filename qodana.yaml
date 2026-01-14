@@ -1,0 +1,22 @@
+version: "1.0"
+linter: jetbrains/qodana-js:latest
+
+# 质量门禁：允许的最大问题总数
+failThreshold: 3
+
+# 如果你想指定某些特定的检查逻辑
+profile:
+  name: qodana.recommended
+
+# 排除不需要扫描的路径
+exclude:
+  - name: All
+    paths:
+      - "**/__tests__/**"
+      - "src-tauri/target"
+      - "node_modules"
+      - "dist"
+      - "build"
+
+# 运行前的初始化命令
+bootstrap: npm install

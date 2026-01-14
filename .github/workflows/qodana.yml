@@ -1,0 +1,32 @@
+name: Qodana Cloud Analysis
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request: # 包含 pull_request 事件以实现 PR 装饰
+  workflow_dispatch:
+
+jobs:
+  qodana:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Qodana Scan'
+        uses: JetBrains/qodana-action@v2024.3
+        with:
+          args: "--linter,jetbrains/qodana-js" # 根据主语言选择 Linter
+          use-annotations: true # 在 GitHub UI 中直接显示问题代码行
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+
+      - name: Upload results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
