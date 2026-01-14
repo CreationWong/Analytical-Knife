@@ -1,7 +1,7 @@
 {
   "name": "analytical_knife",
   "private": true,
-  "version": "V0.4.4 - Dev",
+  "version": "V0.4.5 - Dev",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -35,8 +35,10 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^17.0.0",
     "jsdom": "^27.4.0",
     "typescript": "~5.8.3",
+    "typescript-eslint": "^8.53.0",
     "vite": "^7.0.4",
     "vitest": "^4.0.17"
   }
