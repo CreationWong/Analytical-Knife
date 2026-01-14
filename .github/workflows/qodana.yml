@@ -3,30 +3,36 @@ name: Qodana Cloud Analysis
 on:
   push:
     branches: [ main, master ]
-  pull_request: # 包含 pull_request 事件以实现 PR 装饰
+  pull_request: 
   workflow_dispatch:
 
 jobs:
   qodana:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-      checks: write
+      contents: write      # 允许扫描结果关联代码
+      pull-requests: write # 允许在 PR 中装饰代码
+      checks: write        # 允许在 Checks 选项卡显示状态
+      security-events: write # 必须：允许上传结果到 GitHub Security Tab
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2024.3
         with:
-          args: "--linter,jetbrains/qodana-js" # 根据主语言选择 Linter
-          use-annotations: true # 在 GitHub UI 中直接显示问题代码行
+          # 根据你的主语言（前端项目）选择 Linter
+          args: "--linter,jetbrains/qodana-js"
+          use-annotations: true 
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
 
       - name: Upload results to GitHub
         uses: github/codeql-action/upload-sarif@v3
         with:
+          # 即使 Qodana 失败，也尝试上传已有的扫描结果
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
+        if: success() || failure() 
