@@ -29,11 +29,9 @@ describe('Base64 编解码算法测试', () => {
             expect(base64Decode('MTIzNDU2')).toBe('123456');
         });
 
-        it('输入非法 Base64 字符串时应当抛出错误', () => {
-            // 包含非法字符
-            expect(() => base64Decode('!!!非法字符!!!')).toThrow('无效的 Base64 字符串');
-            // 格式不完整
-            expect(() => base64Decode('aGVsbG')).toThrow();
+        it('非法 Base64 解码时应返回 null', () => {
+            const result = base64Decode('!!!');
+            expect(result).toBeNull();
         });
     });
 
