@@ -9,7 +9,7 @@ const host = process.env.TAURI_DEV_HOST;
  *  版本号处理逻辑
  */
 // 版本号解析逻辑
-const Version = pkg.version;
+const Version = 'V' + pkg.version;
 // 短版本号：提取前面的数字部分
 const shortVersion = ('V' + Version.match(/[\d.]+/)?.[0]) || 'V0';
 
