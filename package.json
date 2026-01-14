@@ -1,7 +1,7 @@
 {
   "name": "analytical_knife",
   "private": true,
-  "version": "V0.4.7 - Dev",
+  "version": "V0.4.8 - Dev",
   "type": "module",
   "scripts": {
     "dev": "vite",

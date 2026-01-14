@@ -10,7 +10,7 @@ import {
 } from '@tabler/icons-react';
 import { useClipboard } from '@mantine/hooks';
 import { showNotification } from '../../utils/notifications';
-import { handleAppError } from "../../utils/error.ts";
+import { handleAppError } from "../../utils/error";
 
 // Payload 模板库
 const WEBSHELL_TEMPLATES = {
