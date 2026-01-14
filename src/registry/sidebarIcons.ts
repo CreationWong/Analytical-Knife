@@ -10,11 +10,12 @@ type IconComponent = React.ComponentType<{ size?: string | number; stroke?: numb
 export const PARENT_ICONS: Record<string, IconComponent> = {
     '设置': IconSettings,
 
-    '编码处理':IconLockCode,
+    '编码处理': IconLockCode,
+    'Base': IconKey,
     '特殊编码': IconJoker,
 
-    '密码分析':IconKey,
-    'RSA':IconKey,
+    '密码分析': IconKey,
+    'RSA': IconKey,
 
     // 网络 & API
     '网络工具': IconWorld,

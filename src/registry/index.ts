@@ -34,8 +34,17 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         name: 'Base64 转换',
         description: '字符串与 Base64 互转',
         icon: IconLockCode,
-        path: '编码处理/base64',
+        path: '编码处理/Base/base64',
         component: lazy(() => import('../tools/Encode&Decode/Base64Tool')),
+    },
+
+    {
+        id: "urlCodecTool",
+        name: "URL 编解码",
+        description: "URL 编解码工具",
+        icon: IconLockCode,
+        path: '编码处理/网络工具/urlCodecTool',
+        component: lazy(() => import('../tools/Encode&Decode/UrlCodecTool.tsx')),
     },
 
     {
