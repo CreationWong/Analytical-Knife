@@ -2,6 +2,7 @@ import {
     IconLayoutDashboard, IconWorld, IconTerminal2, IconWand, IconCode, IconTrophy, IconTools, IconLockCode, IconKey,
     IconBug, IconSettings, IconJoker,
 } from '@tabler/icons-react';
+import React from "react";
 
 // 定义图标组件类型
 type IconComponent = React.ComponentType<{ size?: string | number; stroke?: number }>;

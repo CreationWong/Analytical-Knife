@@ -4,40 +4,53 @@ import {
     Tooltip, CopyButton, Space, Text, Paper, Divider, Box, Button
 } from '@mantine/core';
 import { IconCopy, IconCheck, IconExchange, IconTrash } from '@tabler/icons-react';
+import { showNotification } from '../../utils/notifications';
 
-// --- 核心逻辑 ---
+// --- 核心逻辑域 ---
+
+/**
+ * UTF-8 安全的 Base64 编码
+ */
 export const base64Encode = (str: string): string => {
-    try {
-        if (!str) return '';
-        // UTF-8 Base64 编码方案
-        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
-            String.fromCharCode(parseInt(p1, 16))
-        ));
-    } catch {
-        return '';
-    }
+    if (!str) return '';
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+        String.fromCharCode(parseInt(p1, 16))
+    ));
 };
 
-export const base64Decode = (str: string): string => {
+/**
+ * 校验 Base64 字符串合法性
+ * 采用逻辑返回而非抛出异常
+ */
+export const isValidBase64 = (str: string): boolean => {
+    const cleanedStr = str.replace(/\s/g, '');
+    if (!cleanedStr) return true;
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    return base64Regex.test(cleanedStr) && cleanedStr.length % 4 === 0;
+};
+
+/**
+ * UTF-8 安全的 Base64 解码
+ */
+export const base64Decode = (str: string): string | null => {
+    const cleanedStr = str.replace(/\s/g, '');
+    if (!cleanedStr) return '';
+
+    // 逻辑检查替代 throw 语句
+    if (!isValidBase64(cleanedStr)) return null;
+
     try {
-        if (!str) return '';
-
-        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-        const cleanedStr = str.replace(/\s/g, ''); // 移除空格
-
-        if (!base64Regex.test(cleanedStr) || cleanedStr.length % 4 !== 0) {
-            throw new Error('无效的 Base64 字符串');
-        }
-
         return decodeURIComponent(
             Array.from(atob(cleanedStr)).map(char =>
                 '%' + ('00' + char.charCodeAt(0).toString(16)).slice(-2)
             ).join('')
         );
-    } catch (err) {
-        throw new Error('无效的 Base64 字符串');
+    } catch {
+        return null; // 捕获 atob 可能出现的底层异常
     }
 };
+
+// --- 组件域 ---
 
 enum Mode {
     ENCODE = 'encode',
@@ -49,20 +62,24 @@ export default function Base64Tool() {
     const [mode, setMode] = useState<Mode>(Mode.ENCODE);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    const output = useMemo(() => {
-        if (!input.trim()) return '';
-        try {
-            return mode === Mode.ENCODE ? base64Encode(input) : base64Decode(input);
-        } catch (err) {
-            // 解码失败时不阻塞渲染，仅返回提示
-            return (err as Error).message;
+    const result = useMemo(() => {
+        if (!input.trim()) return { data: '', error: false };
+
+        if (mode === Mode.ENCODE) {
+            return { data: base64Encode(input), error: false };
+        } else {
+            const decoded = base64Decode(input);
+            return decoded !== null
+                ? { data: decoded, error: false }
+                : { data: '无效的 Base64 字符串', error: true };
         }
     }, [input, mode]);
 
     const handleSwapContent = () => {
-        if (output && !output.includes('无效')) {
-            setInput(output);
+        if (result.data && !result.error) {
+            setInput(result.data);
             setMode(mode === Mode.ENCODE ? Mode.DECODE : Mode.ENCODE);
+            showNotification({ type: 'info', message: '内容已交换并切换模式' });
         }
     };
 
@@ -70,7 +87,6 @@ export default function Base64Tool() {
         if (input) setLastUpdated(new Date());
     }, [input, mode]);
 
-    // 计算字节大小
     const getByteSize = (str: string) => new TextEncoder().encode(str).length;
 
     return (
@@ -96,27 +112,34 @@ export default function Base64Tool() {
                     minRows={4}
                     autosize
                     styles={{ input: { fontFamily: 'var(--mantine-font-family-mono)' } }}
+                    error={result.error ? '格式校验失败' : false}
                 />
 
                 <Group mt="xs" gap="xs">
-                    <Tooltip label="交换并切换模式">
-                        <ActionIcon variant="light" color="orange" onClick={handleSwapContent} disabled={!output || output.includes('无效')}>
+                    <Tooltip label="交换内容并切换模式">
+                        <ActionIcon
+                            variant="light"
+                            color="orange"
+                            onClick={handleSwapContent}
+                            disabled={!result.data || result.error}
+                        >
                             <IconExchange size={18} />
                         </ActionIcon>
                     </Tooltip>
-                    <Tooltip label="清空">
+                    <Tooltip label="清空输入">
                         <ActionIcon variant="light" color="red" onClick={() => setInput('')}>
                             <IconTrash size={18} />
                         </ActionIcon>
                     </Tooltip>
                     <Space style={{ flex: 1 }} />
-                    <CopyButton value={output}>
+                    <CopyButton value={result.data}>
                         {({ copied, copy }) => (
                             <Button
                                 size="xs"
                                 variant="light"
                                 color={copied ? 'teal' : 'blue'}
                                 onClick={copy}
+                                disabled={result.error || !result.data}
                                 leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
                             >
                                 {copied ? '已复制' : '复制结果'}
@@ -144,27 +167,27 @@ export default function Base64Tool() {
                         fontFamily: 'var(--mantine-font-family-mono)',
                         fontSize: 'var(--mantine-font-size-sm)',
                         minHeight: '40px',
-                        color: output.includes('无效') ? 'var(--mantine-color-red-6)' : 'inherit'
+                        color: result.error ? 'var(--mantine-color-red-6)' : 'inherit'
                     }}
                 >
-                    {output || '等待输入...'}
+                    {result.data || '等待输入...'}
                 </Box>
 
-                {input && !output.includes('无效') && (
+                {input && !result.error && (
                     <Group mt="md" gap="xl">
                         <Box>
                             <Text size="xs" c="dimmed">输入大小</Text>
-                            <Text size="sm" fw={500}>{getByteSize(input)} Bytes</Text>
+                            <Text size="sm" fw={500}>{getByteSize(input)} B</Text>
                         </Box>
                         <Box>
                             <Text size="xs" c="dimmed">输出大小</Text>
-                            <Text size="sm" fw={500}>{getByteSize(output)} Bytes</Text>
+                            <Text size="sm" fw={500}>{getByteSize(result.data)} B</Text>
                         </Box>
                         {mode === Mode.ENCODE && (
                             <Box>
                                 <Text size="xs" c="dimmed">膨胀率</Text>
                                 <Text size="sm" fw={500} c="orange">
-                                    +{Math.round((getByteSize(output) / getByteSize(input) - 1) * 100)}%
+                                    +{Math.round((getByteSize(result.data) / getByteSize(input) - 1) * 100)}%
                                 </Text>
                             </Box>
                         )}
