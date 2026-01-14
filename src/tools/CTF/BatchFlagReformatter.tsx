@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect, JSX} from 'react';
 import {
     Stack,
     Textarea,
@@ -8,120 +8,178 @@ import {
     Group,
     ActionIcon,
     Tooltip,
+    Divider,
+    Box,
 } from '@mantine/core';
-import { IconFlag3, IconCopy, IconListCheck } from '@tabler/icons-react';
+import { IconFlag3, IconCopy, IconListCheck, IconCheck, IconExclamationCircle } from '@tabler/icons-react';
 import { useClipboard } from '@mantine/hooks';
-import {showNotification} from "../../utils/notifications.ts";
+import { showNotification } from "../../utils/notifications";
 
-// 提取单个 flag 的 {} 内容
-const extractContent = (flag: string): string | null => {
+// --- 核心逻辑 ---
+
+/**
+ * 提取 Flag 中花括号内部的内容
+ * 采用 indexOf 和 lastIndexOf 以支持内容中嵌套花括号的情况
+ */
+export const extractFlagContent = (flag: string): string | null => {
     const start = flag.indexOf('{');
     const end = flag.lastIndexOf('}');
-    if (start === -1 || end === -1 || end <= start) return null;
+    // 确保括号存在且中间有内容
+    if (start === -1 || end === -1 || end <= start + 1) return null;
     return flag.slice(start + 1, end);
 };
 
+/**
+ * 批量处理函数
+ */
+export const reformatFlagsLogic = (input: string, prefix: string) => {
+    const lines = input.split('\n');
+    const validFlags: string[] = [];
+    let invalidCount = 0;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue; // 跳过空行
+
+        const content = extractFlagContent(trimmed);
+        if (content !== null) {
+            validFlags.push(`${prefix.trim()}{${content}}`);
+        } else {
+            invalidCount++;
+        }
+    }
+
+    return {
+        output: validFlags.join('\n'),
+        invalidCount,
+        totalValid: validFlags.length
+    };
+};
+
+// --- 组件部分 ---
+
 export default function BatchFlagReformatter() {
-    const [inputFlags, setInputFlags] = useState<string>(
-        'flag{hello_ctf}'
-    );
+    const [inputFlags, setInputFlags] = useState<string>('flag{hello_ctf}\noriginal{example_data}');
     const [newPrefix, setNewPrefix] = useState<string>('CTF');
     const [outputText, setOutputText] = useState<string>('');
-    const clipboard = useClipboard();
+    const clipboard = useClipboard({ timeout: 2000 });
 
     useEffect(() => {
-        const lines = inputFlags.split('\n');
-        const validFlags: string[] = [];
-        let invalidCount = 0;
+        const { output, invalidCount } = reformatFlagsLogic(inputFlags, newPrefix);
 
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue; // 跳过空行
+        setOutputText(output);
 
-            const content = extractContent(trimmed);
-            if (content !== null) {
-                validFlags.push(`${newPrefix.trim()}{${content}}`);
-            } else {
-                invalidCount++;
-            }
+        // 当用户停止输入且存在无效行时尝试提醒
+        if (invalidCount > 0 && inputFlags.length > 20) {
+            const timer = setTimeout(() => {
+                showNotification({
+                    type: 'warning',
+                    title: '格式解析提示',
+                    message: `已自动跳过 ${invalidCount} 行格式不规范的内容`,
+                    autoClose: 2000,
+                });
+            }, 1000);
+            return () => clearTimeout(timer);
         }
-
-        setOutputText(validFlags.join('\n'));
-
-        // 只在有无效行时提示
-        if (invalidCount > 0) {
-            showNotification({
-                type: 'warning',
-                title: '部分 flag 格式无效',
-                message: `已跳过 ${invalidCount} 行无法识别的格式。`,
-                autoClose: 3000,
-            });
-        }
-
-        setOutputText(validFlags.join('\n'));
     }, [inputFlags, newPrefix]);
 
     return (
         <Stack gap="md">
-            {/* 输入区 */}
-            <Paper p="md" radius="md" withBorder>
-                <Group align="center" mb="sm">
-                    <IconListCheck size={20} />
-                    <Text fw={600}>输入原始 Flags（每行一个）</Text>
-                </Group>
-                <Textarea
-                    placeholder={`例如：FLAG{hello}`}
-                    value={inputFlags}
-                    onChange={(e) => setInputFlags(e.currentTarget.value)}
-                    minRows={4}
-                    autosize
-                    styles={{ input: { fontFamily: 'monospace' } }}
-                />
-            </Paper>
+            <Box>
+                <Title order={4}>批量 Flag 格式转换</Title>
+                <Text size="xs" c="dimmed">批量提取并重命名 CTF Flag 前缀</Text>
+            </Box>
 
-            {/* 新前缀 */}
-            <Paper p="md" radius="md" withBorder>
-                <Group align="center" mb="sm">
-                    <IconFlag3 size={20} />
-                    <Text fw={600}>新 Flag 前缀</Text>
-                </Group>
-                <TextInput
-                    placeholder="例如：CTF"
-                    value={newPrefix}
-                    onChange={(e) => setNewPrefix(e.currentTarget.value)}
-                    styles={{ input: { fontFamily: 'monospace' } }}
-                />
-            </Paper>
+            <Group grow align="flex-start" wrap="wrap">
+                {/* 配置区 */}
+                <Stack gap="md">
+                    <Paper p="md" radius="md" withBorder shadow="xs">
+                        <Group align="center" mb="xs">
+                            <IconFlag3 size={18} color="var(--mantine-color-blue-filled)" />
+                            <Text fw={600} size="sm">新前缀设置</Text>
+                        </Group>
+                        <TextInput
+                            placeholder="例如: CTF, FLAG, EIS"
+                            value={newPrefix}
+                            onChange={(e) => setNewPrefix(e.currentTarget.value)}
+                            styles={{ input: { fontFamily: 'var(--mantine-font-family-mono)' } }}
+                        />
+                    </Paper>
 
-            {/* 输出区 */}
-            {outputText && (
-                <Paper p="md" radius="md" withBorder>
-                    <Group justify="space-between" mb="sm">
-                        <Text fw={600}>转换结果</Text>
-                        <Tooltip label="复制全部">
-                            <ActionIcon
-                                onClick={() => clipboard.copy(outputText)}
-                                variant="light"
-                                color="blue"
-                            >
-                                <IconCopy size={16} />
-                            </ActionIcon>
-                        </Tooltip>
+                    <Paper p="md" radius="md" withBorder shadow="xs">
+                        <Group align="center" mb="xs">
+                            <IconListCheck size={18} color="var(--mantine-color-teal-filled)" />
+                            <Text fw={600} size="sm">原始 Flags 输入</Text>
+                        </Group>
+                        <Textarea
+                            placeholder="每行一个 Flag..."
+                            value={inputFlags}
+                            onChange={(e) => setInputFlags(e.currentTarget.value)}
+                            minRows={8}
+                            autosize
+                            styles={{ input: { fontFamily: 'var(--mantine-font-family-mono)', fontSize: '13px' } }}
+                        />
+                    </Paper>
+                </Stack>
+
+                {/* 结果显示区 */}
+                <Paper p="md" radius="md" withBorder bg="var(--mantine-color-default-hover)" style={{ flex: 1.5 }}>
+                    <Group justify="space-between" mb="xs">
+                        <Group gap="xs">
+                            <Text fw={600} size="sm">转换结果</Text>
+                            {outputText && (
+                                <Text size="xs" c="dimmed">
+                                    共 {outputText.split('\n').length} 项
+                                </Text>
+                            )}
+                        </Group>
+
+                        <Group gap={5}>
+                            <Tooltip label={clipboard.copied ? "已复制" : "全部复制"}>
+                                <ActionIcon
+                                    onClick={() => clipboard.copy(outputText)}
+                                    variant="light"
+                                    color={clipboard.copied ? 'teal' : 'blue'}
+                                    disabled={!outputText}
+                                >
+                                    {clipboard.copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                                </ActionIcon>
+                            </Tooltip>
+                        </Group>
                     </Group>
+
+                    <Divider mb="sm" variant="dashed" />
+
                     <Textarea
                         value={outputText}
                         readOnly
-                        minRows={6}
+                        placeholder="转换后的内容将在这里实时显示"
+                        minRows={14}
                         autosize
+                        variant="unstyled"
                         styles={{
                             input: {
-                                fontFamily: 'monospace',
-                                fontSize: '0.95em',
+                                fontFamily: 'var(--mantine-font-family-mono)',
+                                fontSize: '13px',
+                                lineHeight: 1.6
                             },
                         }}
                     />
+
+                    {!outputText && !inputFlags && (
+                        <Group justify="center" py="xl" c="dimmed">
+                            <IconExclamationCircle size={20} />
+                            <Text size="sm">暂无有效数据</Text>
+                        </Group>
+                    )}
                 </Paper>
-            )}
+            </Group>
         </Stack>
     );
+}
+
+// 辅助 Title 组件
+function Title({ children, order }: { children: React.ReactNode; order: 1 | 2 | 3 | 4 }) {
+    const Tag = `h${order}` as keyof JSX.IntrinsicElements;
+    return <Tag style={{ margin: 0 }}>{children}</Tag>;
 }
