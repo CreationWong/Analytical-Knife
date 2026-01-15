@@ -9,44 +9,45 @@ import { showNotification } from '../../utils/notifications';
 // --- 核心逻辑域 ---
 
 /**
+ * 自动补全 Base64 末尾的等号
+ */
+const padBase64 = (str: string): string => {
+    const diff = str.length % 4;
+    return diff === 0 ? str : str + "=".repeat(4 - diff);
+};
+
+/**
  * UTF-8 安全的 Base64 编码
  */
 export const base64Encode = (str: string): string => {
     if (!str) return '';
-    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
-        String.fromCharCode(parseInt(p1, 16))
-    ));
-};
-
-/**
- * 校验 Base64 字符串合法性
- * 采用逻辑返回而非抛出异常
- */
-export const isValidBase64 = (str: string): boolean => {
-    const cleanedStr = str.replace(/\s/g, '');
-    if (!cleanedStr) return true;
-    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-    return base64Regex.test(cleanedStr) && cleanedStr.length % 4 === 0;
+    const bytes = new TextEncoder().encode(str);
+    const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+    return btoa(binString);
 };
 
 /**
  * UTF-8 安全的 Base64 解码
  */
 export const base64Decode = (str: string): string | null => {
-    const cleanedStr = str.replace(/\s/g, '');
+    let cleanedStr = str.replace(/\s/g, '');
     if (!cleanedStr) return '';
 
-    // 逻辑检查替代 throw 语句
-    if (!isValidBase64(cleanedStr)) return null;
+    // 补全缺失的等号
+    cleanedStr = padBase64(cleanedStr);
+
+    // 正则校验合法性
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(cleanedStr) || cleanedStr.length % 4 !== 0) {
+        return null;
+    }
 
     try {
-        return decodeURIComponent(
-            Array.from(atob(cleanedStr)).map(char =>
-                '%' + ('00' + char.charCodeAt(0).toString(16)).slice(-2)
-            ).join('')
-        );
-    } catch {
-        return null; // 捕获 atob 可能出现的底层异常
+        const binString = atob(cleanedStr);
+        const bytes = Uint8Array.from(binString, (m) => m.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+    } catch (e) {
+        return null;
     }
 };
 

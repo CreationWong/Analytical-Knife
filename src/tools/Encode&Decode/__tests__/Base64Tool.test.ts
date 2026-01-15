@@ -33,6 +33,10 @@ describe('Base64 编解码算法测试', () => {
             const result = base64Decode('!!!');
             expect(result).toBeNull();
         });
+
+        it('应当自动补齐等号解码', () => {
+            expect(base64Decode('TlNTQ1RGe2Jhc2U2NCEhfQ')).toBe('NSSCTF{base64!!}');
+        });
     });
 
     describe('综合测试', () => {
