@@ -2,7 +2,9 @@
 
 mod module; // 声明 module 目录为一个模块
 
+// 导入模块
 use module::crypto::common_modulus::{parse_biguint, recover_plaintext};
+use module::crypto::word_freq::analyze_text_advanced;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -40,6 +42,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
+            analyze_text_advanced,
             common_modulus_attack
         ])
         .run(tauri::generate_context!())
