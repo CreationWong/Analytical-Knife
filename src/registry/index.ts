@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import { ToolDefinition } from './types';
 import {
-    IconBug,
+    IconBug, IconChartBar,
     IconCode, IconHeartHandshake,
     IconInfoCircle,
     IconKey,
@@ -57,11 +57,20 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
     },
 
     {
+        id: 'wordFreq',
+        name: '字频分析',
+        description: '大规模文本频率统计工具',
+        icon: IconChartBar,
+        path: '密码学/Text/WordFreq',
+        component: lazy(() => import('../tools/Crypto/WordFreq.tsx')),
+    },
+
+    {
         id: 'commonModulusAttack',
         name: '共模攻击',
         description: '利用相同模数 N、不同公钥指数的两个 RSA 密文恢复明文',
         icon: IconKey,
-        path: '密码分析/RSA/commonModulusAttack',
+        path: '密码学/RSA/commonModulusAttack',
         component: lazy(() => import('../tools/Crypto/CommonModulusAttack')),
     },
 
