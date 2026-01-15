@@ -1,9 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-// src-tauri/src/lib.rs
 
 mod module; // 声明 module 目录为一个模块
 
-use tauri::command;
 use module::crypto::common_modulus::{parse_biguint, recover_plaintext};
 
 #[tauri::command]
