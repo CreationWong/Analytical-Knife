@@ -5,7 +5,7 @@ import '@mantine/core/styles.css';
 import { Notifications } from '@mantine/notifications';
 import '@mantine/notifications/styles.css';
 import App from './App';
-import { useAppSettings } from './hooks/useAppSettings'; // 确保路径正确
+import { useAppSettings } from './hooks/useAppSettings';
 
 function Root() {
     const [settings] = useAppSettings();
@@ -13,8 +13,11 @@ function Root() {
     const theme = createTheme({
         fontFamily: 'Source Han Mono, sans-serif',
         fontFamilyMonospace: 'Source Han Mono, Monaco, Consolas, monospace',
-        primaryColor: 'blue',
+        primaryColor: settings?.primaryColor || 'blue',
     });
+
+    // 只有在 settings 加载完成后渲染，避免主题闪烁
+    if (!settings) return null;
 
     return (
         <MantineProvider
@@ -26,6 +29,7 @@ function Root() {
         </MantineProvider>
     );
 }
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <Root />
