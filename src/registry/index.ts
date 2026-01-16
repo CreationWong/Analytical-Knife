@@ -6,7 +6,7 @@ import {
     IconInfoCircle,
     IconKey,
     IconListCheck,
-    IconLockCode, IconSettings,
+    IconLockCode, IconLockOpen, IconReplace, IconSettings,
     IconTerminal2
 } from "@tabler/icons-react";
 
@@ -63,6 +63,24 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconChartBar,
         path: '密码学/Text/WordFreq',
         component: lazy(() => import('../tools/Crypto/WordFreq.tsx')),
+    },
+
+    {
+        id: 'smartReplacer',
+        name: '字符替换',
+        description: '多规则替换',
+        icon: IconReplace,
+        path: '密码学/Text/Replacer',
+        component: lazy(() => import('../tools/Crypto/SmartReplacer.tsx')),
+    },
+
+    {
+        id: "bigRsaSolver",
+        name: "BigRSA (共享素数)",
+        description: "利用模数共享质因数(GCD)破解 RSA密文",
+        icon: IconLockOpen,
+        path: '密码学/RSA/bigRsaSolver',
+        component: lazy(() => import('../tools/Crypto/BigRSASolver.tsx')),
     },
 
     {
