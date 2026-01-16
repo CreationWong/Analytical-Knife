@@ -36,7 +36,24 @@ src-tauri/src/
 
 ## 2. 代码开发过程
 
-### 第一步：后端逻辑实现 (Rust)
+一般分为 **前端工具** 和 **后端工具** 。前端工具适合简单编解码、生成器等性能开销不大情景，对于需要大量计算和分析的工具 **必须使用后端** ！
+
+### 前端组件开发 (React)
+
+在 `src/tools/[Category]/[ToolName].tsx` 中实现 UI。推荐将纯算法逻辑提取，以便测试。
+
+```typescript
+import { Paper, Stack, TextInput } from '@mantine/core';
+import { handleAppError } from '../../utils/error';
+
+export const localLogic = (val: string) => val.trim();
+
+export default function MyTool() {
+  // UI 实现...
+}
+```
+
+### 后端逻辑实现 (Rust)
 
 在 `src-tauri/src/modules/[domain]/[tool_name].rs` 中编写核心算法。**必须包含内部单元测试**。
 
@@ -60,27 +77,12 @@ mod tests {
 }
 ```
 
-### 第二步：前端组件开发 (React)
-
-在 `src/tools/[Category]/[ToolName].tsx` 中实现 UI。推荐将纯算法逻辑提取，以便测试。
-
-```typescript
-import { Paper, Stack, TextInput } from '@mantine/core';
-import { handleAppError } from '../../utils/error';
-
-export const localLogic = (val: string) => val.trim();
-
-export default function MyTool() {
-  // UI 实现...
-}
-```
-
-### 第三步：全栈测试验证
+### 全栈测试验证
 
 - **后端测试**：执行 `cargo test`。
 - **前端测试**：在 `__tests__` 下编写 Vitest 用例，执行 `npm test`。
 
-### 第四步：注册登记
+### 注册登记
 
 在 `src/registry/index.ts` 中登记工具元数据：
 
