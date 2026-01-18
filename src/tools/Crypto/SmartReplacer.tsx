@@ -6,14 +6,17 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { IconCopy, IconCheck, IconAlertTriangle } from '@tabler/icons-react';
+import { useAppSettings } from '../../hooks/useAppSettings';
 
 export default function SmartReplacer() {
+    const [settings] = useAppSettings();
+    const themeColor = settings?.primaryColor || 'blue';
+
     const [input, setInput] = useState('');
     const [rules, setRules] = useState('A -> C\nB -> D');
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
 
-    // 获取当前主题模式
     const { colorScheme } = useMantineColorScheme();
     const isDark = colorScheme === 'dark';
 
@@ -24,7 +27,6 @@ export default function SmartReplacer() {
     // 适配深色模式的高亮颜色生成
     const getStrikingColor = (index: number) => {
         const hue = (index * 137.5) % 360;
-        // 深色模式下降低亮度，增加饱和度，避免刺眼
         return isDark
             ? `hsla(${hue}, 80%, 35%, 0.65)`
             : `hsla(${hue}, 85%, 75%, 0.75)`;
@@ -120,7 +122,6 @@ export default function SmartReplacer() {
                         </Alert>
                     )}
 
-                    {/* 使用默认主题背景，移除硬编码 gray.0 */}
                     <Paper withBorder p="xs" bg="var(--mantine-color-default-hover)">
                         <Text size="xs" fw={700} mb="xs" style={{userSelect: 'none'}}>颜色映射索引</Text>
                         <ScrollArea.Autosize mah={300}>
@@ -147,7 +148,7 @@ export default function SmartReplacer() {
                     }}>
                         <Group justify="space-between" p="6px 12px" bg="var(--mantine-color-default-hover)" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', userSelect: 'none' }}>
                             <Text size="xs" fw={700}>原始输入</Text>
-                            {loading && <Loader size="xs" />}
+                            {loading && <Loader size="xs" color={themeColor} />}
                         </Group>
                         <Box pos="relative" h="calc(100% - 33px)">
                             <div ref={editorBackdropRef} style={{ ...commonStyle, zIndex: 1, color: 'transparent', overflow: 'auto' }}>
@@ -169,12 +170,21 @@ export default function SmartReplacer() {
                         borderRadius: '8px',
                         overflow: 'hidden'
                     }}>
-                        <Group justify="space-between" p="6px 12px" bg={isDark ? "var(--mantine-color-blue-9)" : "blue.0"} style={{ borderBottom: '1px solid var(--mantine-color-default-border)', userSelect: 'none' }}>
-                            <Text size="xs" fw={700} c={isDark ? "blue.0" : "blue.9"}>处理结果</Text>
+                        <Group
+                            justify="space-between"
+                            p="6px 12px"
+                            bg={isDark ? `var(--mantine-color-${themeColor}-9)` : `var(--mantine-color-${themeColor}-0)`}
+                            style={{ borderBottom: '1px solid var(--mantine-color-default-border)', userSelect: 'none' }}
+                        >
+                            <Text size="xs" fw={700} c={isDark ? `var(--mantine-color-${themeColor}-0)` : `var(--mantine-color-${themeColor}-9)`}>处理结果</Text>
                             <CopyButton value={result?.replaced_content || ''} timeout={2000}>
                                 {({ copied, copy }) => (
                                     <Tooltip label={copied ? '已复制' : '复制结果'}>
-                                        <ActionIcon color={copied ? 'teal' : 'gray'} variant="subtle" onClick={copy}>
+                                        <ActionIcon
+                                            color={copied ? 'teal' : themeColor}
+                                            variant="subtle"
+                                            onClick={copy}
+                                        >
                                             {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
                                         </ActionIcon>
                                     </Tooltip>

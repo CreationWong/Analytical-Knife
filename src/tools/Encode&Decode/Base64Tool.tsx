@@ -5,6 +5,7 @@ import {
 } from '@mantine/core';
 import { IconCopy, IconCheck, IconExchange, IconTrash } from '@tabler/icons-react';
 import { showNotification } from '../../utils/notifications';
+import { useAppSettings } from '../../hooks/useAppSettings';
 
 // --- 核心逻辑域 ---
 
@@ -59,6 +60,7 @@ enum Mode {
 }
 
 export default function Base64Tool() {
+    const [settings] = useAppSettings();
     const [input, setInput] = useState('');
     const [mode, setMode] = useState<Mode>(Mode.ENCODE);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -138,7 +140,7 @@ export default function Base64Tool() {
                             <Button
                                 size="xs"
                                 variant="light"
-                                color={copied ? 'teal' : 'blue'}
+                                color={copied ? 'teal' : settings.primaryColor}
                                 onClick={copy}
                                 disabled={result.error || !result.data}
                                 leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}

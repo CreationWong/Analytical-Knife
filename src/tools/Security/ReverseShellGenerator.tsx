@@ -94,7 +94,7 @@ export default function ReverseShellGenerator() {
             <Stack>
                 <Group justify="space-between">
                     <Group gap="xs">
-                        <IconTerminal2 size={24} color="var(--mantine-color-blue-6)" />
+                        <IconTerminal2 size={24} color="var(--mantine-color-red-6)" />
                         <Text fw={700} size="lg">反弹 Shell 生成器</Text>
                     </Group>
 

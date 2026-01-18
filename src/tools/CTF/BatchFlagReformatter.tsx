@@ -14,6 +14,7 @@ import {
 import { IconFlag3, IconCopy, IconListCheck, IconCheck, IconExclamationCircle } from '@tabler/icons-react';
 import { useClipboard } from '@mantine/hooks';
 import { showNotification } from "../../utils/notifications";
+import { useAppSettings } from '../../hooks/useAppSettings';
 
 // --- 核心逻辑 ---
 
@@ -59,6 +60,7 @@ export const reformatFlagsLogic = (input: string, prefix: string) => {
 // --- 组件部分 ---
 
 export default function BatchFlagReformatter() {
+    const [settings] = useAppSettings();
     const [inputFlags, setInputFlags] = useState<string>('flag{hello_ctf}\noriginal{example_data}');
     const [newPrefix, setNewPrefix] = useState<string>('CTF');
     const [outputText, setOutputText] = useState<string>('');
@@ -95,7 +97,7 @@ export default function BatchFlagReformatter() {
                 <Stack gap="md">
                     <Paper p="md" radius="md" withBorder shadow="xs">
                         <Group align="center" mb="xs">
-                            <IconFlag3 size={18} color="var(--mantine-color-blue-filled)" />
+                            <IconFlag3 size={18} color={`var(--mantine-color-${settings.primaryColor}-filled)`} />
                             <Text fw={600} size="sm">新前缀设置</Text>
                         </Group>
                         <TextInput
@@ -108,7 +110,7 @@ export default function BatchFlagReformatter() {
 
                     <Paper p="md" radius="md" withBorder shadow="xs">
                         <Group align="center" mb="xs">
-                            <IconListCheck size={18} color="var(--mantine-color-teal-filled)" />
+                            <IconListCheck size={18} color={`var(--mantine-color-${settings.primaryColor}-filled)`} />
                             <Text fw={600} size="sm">原始 Flags 输入</Text>
                         </Group>
                         <Textarea
@@ -139,7 +141,7 @@ export default function BatchFlagReformatter() {
                                 <ActionIcon
                                     onClick={() => clipboard.copy(outputText)}
                                     variant="light"
-                                    color={clipboard.copied ? 'teal' : 'blue'}
+                                    color={clipboard.copied ? 'teal' : settings.primaryColor}
                                     disabled={!outputText}
                                 >
                                     {clipboard.copied ? <IconCheck size={16} /> : <IconCopy size={16} />}

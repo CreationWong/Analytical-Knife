@@ -11,6 +11,7 @@ import {
 import { useClipboard } from '@mantine/hooks';
 import { showNotification } from '../../utils/notifications';
 import { handleAppError } from "../../utils/error";
+import { useAppSettings } from '../../hooks/useAppSettings';
 
 // Payload 模板库
 const WEBSHELL_TEMPLATES = {
@@ -33,6 +34,7 @@ const WEBSHELL_TEMPLATES = {
 };
 
 export default function WebshellGenerator() {
+    const [settings] = useAppSettings();
     const [tab, setTab] = useState<string | null>('PHP');
     const [type, setType] = useState<string | null>('php_eval');
     const [password, setPassword] = useState('ant');
@@ -130,7 +132,7 @@ export default function WebshellGenerator() {
                             <Tooltip label={clipboard.copied ? "已复制" : "点击复制"}>
                                 <ActionIcon
                                     variant="light"
-                                    color={clipboard.copied ? 'green' : 'blue'}
+                                    color={clipboard.copied ? 'green' : settings.primaryColor}
                                     onClick={() => {
                                         clipboard.copy(payload);
                                         showNotification({ type: 'info', message: 'Payload 已复制到剪贴板' });

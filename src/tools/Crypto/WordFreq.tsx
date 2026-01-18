@@ -59,7 +59,7 @@ export default function AdvancedWordFreq() {
             <Grid gutter="md">
                 <Grid.Col span={{ base: 12, md: 4 }}>
                     <Paper p="md" withBorder shadow="sm" radius="md">
-                        <Group mb="xs"><IconSettings size={20} color="blue" /><Title order={5}>分析配置</Title></Group>
+                        <Group mb="xs"><IconSettings size={20} /><Title order={5}>分析配置</Title></Group>
                         <Divider mb="md" />
                         <Stack gap="sm">
                             <Checkbox label="转换为小写" checked={config.lowercase} onChange={(e) => setConfig({ ...config, lowercase: e.currentTarget.checked })} />
