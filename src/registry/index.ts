@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { ToolDefinition } from './types';
 import {
+    IconBrush,
     IconBug, IconChartBar,
     IconCode, IconHeartHandshake,
     IconInfoCircle,
@@ -18,6 +19,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconInfoCircle,
         path: null,
         component: lazy(() => import('../components/./Home')),
+        windowMaxWidth: 'none',
     },
 
     {
@@ -27,6 +29,16 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconSettings,
         path: '设置/UISettings',
         component: lazy(() => import('../components/./UISettings')),
+    },
+
+    {
+        id: 'excalidraw',
+        name: 'Excalidraw',
+        description: '手绘风格绘图工具',
+        icon: IconBrush,
+        path: '想法/excalidraw',
+        component: lazy(() => import('../tools/idea/Excalidraw.tsx')),
+        windowMaxWidth: 'none',
     },
 
     {

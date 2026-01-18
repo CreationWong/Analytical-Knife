@@ -1,4 +1,4 @@
-import React, { useState, Suspense, useMemo } from 'react';
+import { useState, Suspense, useMemo } from 'react';
 import {
     AppShell,
     Burger,
@@ -79,11 +79,21 @@ export default function App() {
     }, []);
 
     // 递归渲染侧边栏菜单
-    const renderNavNodes = (nodes: Record<string, TreeNode>) => {
+    const renderNavNodes = (nodes: Record<string, TreeNode>, inheritedIcon?: any) => {
         return Object.entries(nodes).map(([key, node]) => {
             const isLeaf = !!node.toolId;
             const tool = isLeaf ? TOOLS_REGISTRY.find(t => t.id === node.toolId) : null;
             const hasChildren = Object.keys(node.children).length > 0;
+
+            let CurrentIcon;
+
+            if (isLeaf) {
+                // 叶子节点（工具）：注册表定义 > 继承的父节点图标 > 默认图标
+                CurrentIcon = tool?.icon || inheritedIcon || IconLayoutDashboard;
+            } else {
+                // 父节点（目录）：sidebarIcons 定义 > 继承的父节点图标 > 默认图标
+                CurrentIcon = PARENT_ICONS[key] || inheritedIcon || IconLayoutDashboard;
+            }
 
             return (
                 <Tooltip
@@ -95,22 +105,9 @@ export default function App() {
                 >
                     <NavLink
                         label={desktopOpened ? node.label : null}
-                        // 仅在展开且是工具时显示描述
                         description={desktopOpened && isLeaf ? tool?.description : null}
                         leftSection={
-                            isLeaf ? (
-                                tool?.icon ? (
-                                    <tool.icon size="1.2rem" stroke={1.5} />
-                                ) : (
-                                    <IconLayoutDashboard size="1.2rem" stroke={1.5} />
-                                )
-                            ) : (
-                                // 父节点：根据 key（路径段名）查图标
-                                React.createElement(
-                                    PARENT_ICONS[key] || IconLayoutDashboard,
-                                    { size: "1.2rem", stroke: 1.5 }
-                                )
-                            )
+                            <CurrentIcon size="1.2rem" stroke={1.5} />
                         }
                         active={isLeaf && activeId === node.toolId}
                         childrenOffset={desktopOpened ? 20 : 0}
@@ -124,24 +121,17 @@ export default function App() {
                         styles={{
                             root: {
                                 borderRadius: 'var(--mantine-radius-sm)',
-                                marginBottom: '4px', // 稍微增加间距以适应双行文字
+                                marginBottom: '4px',
                                 justifyContent: desktopOpened ? 'flex-start' : 'center',
-                                // 如果有描述，稍微增加高度
                                 minHeight: desktopOpened && isLeaf && tool?.description ? 54 : 42,
                             },
                             section: { margin: desktopOpened ? undefined : 0 },
-                            body: {
-                                // 限制描述文字过长时显示省略号
-                                overflow: 'hidden'
-                            },
-                            description: {
-                                fontSize: '10px',
-                                opacity: 0.7,
-                                marginTop: '2px'
-                            }
+                            body: { overflow: 'hidden' },
+                            description: { fontSize: '10px', opacity: 0.7, marginTop: '2px' }
                         }}
                     >
-                        {desktopOpened && hasChildren && renderNavNodes(node.children)}
+                        {/* 递归调用：将当前的 CurrentIcon 传给子节点作为继承项 */}
+                        {desktopOpened && hasChildren && renderNavNodes(node.children, CurrentIcon)}
                     </NavLink>
                 </Tooltip>
             );
@@ -149,6 +139,14 @@ export default function App() {
     };
 
     const activeTool = TOOLS_REGISTRY.find((t) => t.id === activeId);
+
+    // 确定当前容器的最大宽度逻辑：
+    // 1. 如果工具明确定义了 maxWidth，则使用该值
+    // 2. 如果没定义，默认使用 1200
+    const currentMaxWidth = activeTool?.windowMaxWidth !== undefined ? activeTool.windowMaxWidth : 1200;
+
+    // 确定内边距：如果是全屏模式（none），则去掉内边距
+    const contentPadding = currentMaxWidth === 'none' ? 0 : 'md';
 
     return (
         <AppShell
@@ -222,15 +220,17 @@ export default function App() {
             {/* 主内容区域 */}
             <AppShell.Main bg="var(--mantine-color-body)">
                 <ToolErrorBoundary key={activeId}>
-                    <Suspense
-                        fallback={
-                            <Stack align="center" justify="center" h="100%" gap="md">
-                                <Loader size="lg" type="dots" />
-                                <Text size="sm" c="dimmed">正在加载工具模块...</Text>
-                            </Stack>
-                        }
-                    >
-                        <Box p="md" maw={1200} mx="auto">
+                    <Suspense fallback={<Loader />}>
+                        <Box
+                            p={contentPadding}
+                            maw={currentMaxWidth === 'none' ? '100%' : currentMaxWidth}
+                            mx="auto"
+                            style={{
+                                height: currentMaxWidth === 'none' ? 'calc(100vh - 100px)' : 'auto',    // calc(100vh - 100px) 防止出现滚动条
+                                display: 'flex',
+                                flexDirection: 'column'
+                            }}
+                        >
                             {activeTool ? (
                                 <activeTool.component />
                             ) : (

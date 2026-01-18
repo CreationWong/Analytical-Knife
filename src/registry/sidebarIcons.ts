@@ -1,6 +1,6 @@
 import {
-    IconLayoutDashboard, IconWorld, IconTerminal2, IconWand, IconCode, IconTrophy, IconTools, IconLockCode, IconKey,
-    IconBug, IconSettings, IconJoker, IconLanguage,
+    IconWorld, IconTerminal2, IconWand, IconCode, IconTrophy, IconTools, IconLockCode, IconKey,
+    IconBug, IconSettings, IconJoker, IconLanguage, IconBulb,
 } from '@tabler/icons-react';
 import React from "react";
 
@@ -10,6 +10,8 @@ type IconComponent = React.ComponentType<{ size?: string | number; stroke?: numb
 // 路径段名称 → 图标组件 的映射表
 export const PARENT_ICONS: Record<string, IconComponent> = {
     '设置': IconSettings,
+
+    '想法': IconBulb,
 
     '编码处理': IconLockCode,
     'Base': IconKey,
@@ -33,6 +35,3 @@ export const PARENT_ICONS: Record<string, IconComponent> = {
     '辅助': IconTools,
 
 };
-
-// 默认 fallback 图标
-export const DEFAULT_PARENT_ICON: IconComponent = IconLayoutDashboard;
