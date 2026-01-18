@@ -136,6 +136,15 @@ try {
   - 文字：`var(--mantine-color-text)`
   - 容器弱背景：`var(--mantine-color-default-hover)`
 - **容器组件**：优先使用 `<Paper withBorder shadow="xs" />`，边框颜色将由 Mantine 根据模式自动切换。
+- **主题颜色**：
+  - 本项目允许用户定义不妨碍视觉引导的主题颜色。
+  - 请导入 `import { useAppSettings } from '../../hooks/useAppSettings';` 以获取 HOOK。
+  - 按照 HOOK 规范定义、导入和使用。例：const [settings] = useAppSettings();
+    - 使用 `settings.primaryColor`  获取用户定义的颜色。
+    - 可以使用 `var(--mantine-color-${settings.primaryColor}-filled)` 定义图标颜色。
+
+  - 注意：应当不影响深色模式下使用。
+
 
 ------
 
