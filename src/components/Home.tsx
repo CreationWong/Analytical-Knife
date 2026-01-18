@@ -2,9 +2,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {Container, Paper, ScrollArea} from '@mantine/core';
 // 使用 ?raw 获取文件字符串内容
-import aboutContent from '../assets/about/info.md?raw';
+import aboutContent from '../assets/about/home.md?raw';
 
-export default function About() {
+export default function Home() {
     return (
         <Container size="md" py="xl">
             <Paper p="xl" radius="md" withBorder shadow="sm">

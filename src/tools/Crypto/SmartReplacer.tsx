@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, JSX } from 'react';
+import React, { useState, useEffect, useMemo, useRef, JSX } from 'react';
 import {
     Paper, Stack, Textarea, Box, Text, Group, ScrollArea,
     Loader, Grid, ColorSwatch, ActionIcon, CopyButton, Tooltip, Alert, useMantineColorScheme

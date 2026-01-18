@@ -17,7 +17,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         description: '软件信息与说明',
         icon: IconInfoCircle,
         path: null,
-        component: lazy(() => import('../components/About')),
+        component: lazy(() => import('../components/./Home')),
     },
 
     {
