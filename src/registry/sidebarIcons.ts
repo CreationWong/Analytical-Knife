@@ -23,6 +23,7 @@ export const PARENT_ICONS: Record<string, IconComponent> = {
 
     // 网络 & API
     '网络工具': IconWorld,
+    '网络': IconWorld,
     'API': IconTerminal2,
 
     // 生成器

@@ -51,20 +51,11 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
     },
 
     {
-        id: 'caesarCipher',
-        name: '凯撒密码',
-        description: '移位加解密与暴力破解',
-        icon: IconLockAccess,
-        path: '编码处理/ROT/caesarCipher',
-        component: lazy(() => import('../tools/Encode&Decode/CaesarCipher')),
-    },
-
-    {
         id: "urlCodecTool",
         name: "URL 编解码",
         description: "URL 编解码工具",
         icon: IconLockCode,
-        path: '编码处理/网络工具/urlCodecTool',
+        path: '编码处理/网络/urlCodecTool',
         component: lazy(() => import('../tools/Encode&Decode/UrlCodecTool.tsx')),
     },
 
@@ -111,6 +102,24 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconKey,
         path: '密码学/RSA/commonModulusAttack',
         component: lazy(() => import('../tools/Crypto/CommonModulusAttack')),
+    },
+
+    {
+        id: 'caesarCipher',
+        name: '凯撒密码',
+        description: '移位加解密与暴力破解',
+        icon: IconLockAccess,
+        path: '密码学/ROT/caesarCipher',
+        component: lazy(() => import('../tools/Encode&Decode/CaesarCipher')),
+    },
+
+    {
+        id: 'vigenereCipher',
+        name: '维吉尼亚密码',
+        description: '经典多表替换加密',
+        icon: IconKey,
+        path: '密码学/vigenereCipher',
+        component: lazy(() => import('../tools/Encode&Decode/Vigenere')),
     },
 
     {

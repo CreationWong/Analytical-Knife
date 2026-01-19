@@ -8,6 +8,7 @@ use modules::crypto::word_freq::analyze_text_advanced;
 use modules::crypto::big_rsa::solve_multi_layer_rsa;
 use modules::crypto::replacer::batch_replace;
 use modules::crypto::caesar::{caesar_transform, caesar_crack};
+use modules::encode_decode::vigenere::{vigenere_cipher, crack_vigenere_auto};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -46,11 +47,19 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             analyze_text_advanced,
+
             common_modulus_attack,
+
             solve_multi_layer_rsa,
+
             batch_replace,
+
             caesar_transform,
             caesar_crack,
+
+            vigenere_cipher,
+            crack_vigenere_auto,
+
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
