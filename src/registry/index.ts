@@ -110,7 +110,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         description: '移位加解密与暴力破解',
         icon: IconLockAccess,
         path: '密码学/ROT/caesarCipher',
-        component: lazy(() => import('../tools/Encode&Decode/CaesarCipher')),
+        component: lazy(() => import('../tools/Crypto/CaesarCipher.tsx')),
     },
 
     {
@@ -119,7 +119,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         description: '经典多表替换加密',
         icon: IconKey,
         path: '密码学/vigenereCipher',
-        component: lazy(() => import('../tools/Encode&Decode/Vigenere')),
+        component: lazy(() => import('../tools/Crypto/Vigenere.tsx')),
     },
 
     {

@@ -33,8 +33,8 @@ import {
     IconCheck as IconSuccess,
     IconArrowRight
 } from '@tabler/icons-react';
-import { handleAppError } from '../../utils/error';
-import { useAppSettings } from '../../hooks/useAppSettings';
+import { handleAppError } from '../../utils/error.tsx';
+import { useAppSettings } from '../../hooks/useAppSettings.ts';
 
 // 定义后端返回的破解结果类型
 interface CrackResult {

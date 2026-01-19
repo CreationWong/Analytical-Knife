@@ -7,9 +7,9 @@ import {
 import { useDebouncedValue } from '@mantine/hooks';
 import { IconLock, IconLockOpen, IconAnalyze, IconCopy, IconCheck } from '@tabler/icons-react';
 import { invoke } from '@tauri-apps/api/core';
-import { handleAppError } from '../../utils/error';
-import { showNotification } from '../../utils/notifications';
-import { useAppSettings } from '../../hooks/useAppSettings';
+import { handleAppError } from '../../utils/error.tsx';
+import { showNotification } from '../../utils/notifications.tsx';
+import { useAppSettings } from '../../hooks/useAppSettings.ts';
 
 // --- 类型定义 ---
 type AlgorithmVariant = 'standard' | 'rot18' | 'rot47';
