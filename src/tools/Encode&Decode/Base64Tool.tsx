@@ -135,6 +135,17 @@ export default function Base64Tool() {
                         </ActionIcon>
                     </Tooltip>
                     <Space style={{ flex: 1 }} />
+                    {lastUpdated && (
+                        <Text size="xs" c="dimmed">
+                            更新于: {lastUpdated.toLocaleTimeString()}
+                        </Text>
+                    )}
+                </Group>
+            </Paper>
+
+            <Paper p="md" withBorder bg="var(--mantine-color-default-hover)">
+                <Group justify="space-between" mb="xs">
+                    <Text fw={600} size="sm">{mode === Mode.ENCODE ? '编码结果' : '解码原文'}</Text>
                     <CopyButton value={result.data}>
                         {({ copied, copy }) => (
                             <Button
@@ -149,17 +160,6 @@ export default function Base64Tool() {
                             </Button>
                         )}
                     </CopyButton>
-                </Group>
-            </Paper>
-
-            <Paper p="md" withBorder bg="var(--mantine-color-default-hover)">
-                <Group justify="space-between" mb="xs">
-                    <Text fw={600} size="sm">{mode === Mode.ENCODE ? '编码结果' : '解码原文'}</Text>
-                    {lastUpdated && (
-                        <Text size="xs" c="dimmed">
-                            更新于: {lastUpdated.toLocaleTimeString()}
-                        </Text>
-                    )}
                 </Group>
                 <Divider mb="sm" variant="dashed" />
                 <Box
