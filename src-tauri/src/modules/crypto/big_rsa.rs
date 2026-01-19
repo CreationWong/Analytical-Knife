@@ -3,16 +3,24 @@ use num_integer::Integer;
 use num_traits::{One, Zero};
 
 #[tauri::command]
-pub fn solve_multi_layer_rsa(n_list: Vec<String>, e_str: String, c_str: String) -> Result<String, String> {
+pub fn solve_multi_layer_rsa(
+    n_list: Vec<String>,
+    e_str: String,
+    c_str: String,
+) -> Result<String, String> {
     let mut b_n_list = Vec::new();
     for (idx, n_s) in n_list.iter().enumerate() {
         let parsed = BigInt::parse_bytes(n_s.trim().as_bytes(), 10)
             .ok_or(format!("N{} 格式错误", idx + 1))?;
-        if parsed.is_zero() { return Err(format!("N{} 不能为零", idx + 1)); }
+        if parsed.is_zero() {
+            return Err(format!("N{} 不能为零", idx + 1));
+        }
         b_n_list.push(parsed);
     }
 
-    if b_n_list.len() < 2 { return Err("需要至少两个模数".into()); }
+    if b_n_list.len() < 2 {
+        return Err("需要至少两个模数".into());
+    }
 
     let e = BigInt::parse_bytes(e_str.trim().as_bytes(), 10).ok_or("E 格式错误")?;
     let mut current_m = BigInt::parse_bytes(c_str.trim().as_bytes(), 10).ok_or("C 格式错误")?;
@@ -22,7 +30,9 @@ pub fn solve_multi_layer_rsa(n_list: Vec<String>, e_str: String, c_str: String) 
 
         let mut q = BigInt::one();
         for (j, other_n) in b_n_list.iter().enumerate() {
-            if i == j { continue; }
+            if i == j {
+                continue;
+            }
             let g = n_current.gcd(other_n);
             if g > BigInt::one() {
                 q = g;
@@ -36,12 +46,14 @@ pub fn solve_multi_layer_rsa(n_list: Vec<String>, e_str: String, c_str: String) 
 
         let p = n_current / &q;
         let phi = (&q - BigInt::one()) * (&p - BigInt::one());
-        
+
         if phi.is_zero() {
             return Err(format!("第 {} 层 phi 为零（可能 N 包含重复质因数）", i + 1));
         }
 
-        let d = e.modinv(&phi).ok_or(format!("无法计算第 {} 层的私钥 (e 与 phi 不互质)", i + 1))?;
+        let d = e
+            .modinv(&phi)
+            .ok_or(format!("无法计算第 {} 层的私钥 (e 与 phi 不互质)", i + 1))?;
 
         current_m = current_m.modpow(&d, n_current);
     }

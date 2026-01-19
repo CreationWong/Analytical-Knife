@@ -3,7 +3,7 @@ import { ToolDefinition } from './types';
 import {
     IconBrush,
     IconBug, IconChartBar,
-    IconCode, IconHeartHandshake,
+    IconCode, IconGhost, IconHeartHandshake,
     IconInfoCircle,
     IconKey,
     IconListCheck, IconLockAccess,
@@ -120,6 +120,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconKey,
         path: '密码学/vigenereCipher',
         component: lazy(() => import('../tools/Encode&Decode/Vigenere')),
+    },
+
+    {
+        id: 'mirageTank',
+        name: '幻影坦克',
+        description: '幻影坦克制作器',
+        icon: IconGhost,
+        path: 'Images/隐写/mirageTank',
+        component: lazy(() => import('../tools/Images/MirageTank')),
     },
 
     {

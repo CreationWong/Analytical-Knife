@@ -1,6 +1,6 @@
 import {
     IconWorld, IconTerminal2, IconWand, IconCode, IconTrophy, IconTools, IconLockCode, IconKey,
-    IconBug, IconSettings, IconJoker, IconLanguage, IconBulb,
+    IconBug, IconSettings, IconJoker, IconLanguage, IconBulb, IconPhoto, IconPhotoQuestion,
 } from '@tabler/icons-react';
 import React from "react";
 
@@ -20,6 +20,9 @@ export const PARENT_ICONS: Record<string, IconComponent> = {
     '密码学': IconKey,
     'Text': IconLanguage,
     'RSA': IconKey,
+
+    'Images': IconPhoto,
+    '隐写': IconPhotoQuestion,
 
     // 网络 & API
     '网络工具': IconWorld,

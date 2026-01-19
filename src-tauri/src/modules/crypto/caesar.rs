@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct CrackResult {
     pub label: String, // 算法名称
     pub text: String,
-    pub score: f64,    // 评分
+    pub score: f64, // 评分
 }
 
 // 简单的英文频率打分
@@ -25,8 +25,16 @@ fn score_text(text: &str) -> f64 {
 
 // 标准凯撒 (支持可选的数字偏移)
 fn rotate_standard(text: &str, shift: u8, decrypt: bool, shift_numbers: bool) -> String {
-    let shift_alpha = if decrypt { (26 - (shift % 26)) % 26 } else { shift % 26 };
-    let shift_digit = if decrypt { (10 - (shift % 10)) % 10 } else { shift % 10 };
+    let shift_alpha = if decrypt {
+        (26 - (shift % 26)) % 26
+    } else {
+        shift % 26
+    };
+    let shift_digit = if decrypt {
+        (10 - (shift % 10)) % 10
+    } else {
+        shift % 10
+    };
 
     text.chars()
         .map(|c| {
@@ -89,7 +97,7 @@ pub fn caesar_transform(
     shift: u8,
     mode: String,
     shift_numbers: bool,
-    variant: String // "standard" | "rot18" | "rot47"
+    variant: String, // "standard" | "rot18" | "rot47"
 ) -> Result<String, String> {
     if input.is_empty() {
         return Ok("".into());
@@ -111,7 +119,7 @@ pub fn caesar_transform(
 pub fn caesar_crack(
     input: String,
     keyword: Option<String>,
-    scope: String // "common" | "full"
+    scope: String, // "common" | "full"
 ) -> Result<Vec<CrackResult>, String> {
     if input.is_empty() {
         return Err("输入内容不能为空".into());
@@ -127,12 +135,19 @@ pub fn caesar_crack(
                 score += 1000.0; // 命中关键词加分
             }
         }
-        results.push(CrackResult { label, text: decoded, score });
+        results.push(CrackResult {
+            label,
+            text: decoded,
+            score,
+        });
     };
 
     // 始终运行常用算法
     add_result("ROT3".into(), rotate_standard(&input, 3, true, false));
-    add_result("ROT5 (Digits)".into(), rotate_standard(&input, 5, true, true));
+    add_result(
+        "ROT5 (Digits)".into(),
+        rotate_standard(&input, 5, true, true),
+    );
     add_result("ROT13".into(), rotate_standard(&input, 13, true, false));
     add_result("ROT18".into(), rotate_rot18(&input));
     add_result("ROT47".into(), rotate_rot47(&input));
@@ -141,7 +156,9 @@ pub fn caesar_crack(
     if scope == "full" {
         for s in 1..26 {
             // 跳过已计算的常用位移
-            if s == 3 || s == 5 || s == 13 { continue; }
+            if s == 3 || s == 5 || s == 13 {
+                continue;
+            }
 
             // 默认计算包含数字偏移的情况 (通用性更强)
             let decoded = rotate_standard(&input, s as u8, true, true);
@@ -169,8 +186,9 @@ mod tests {
             3,
             "encrypt".into(),
             false,
-            "standard".into()
-        ).unwrap();
+            "standard".into(),
+        )
+        .unwrap();
         assert_eq!(res, "Khoor Zruog");
     }
 
@@ -182,21 +200,17 @@ mod tests {
             3,
             "decrypt".into(),
             false,
-            "standard".into()
-        ).unwrap();
+            "standard".into(),
+        )
+        .unwrap();
         assert_eq!(res, "Hello World");
     }
 
     #[test]
     fn test_wrap_around() {
         // 边界测试：Z + 1 = A
-        let res = caesar_transform(
-            "Zz".into(),
-            1,
-            "encrypt".into(),
-            false,
-            "standard".into()
-        ).unwrap();
+        let res =
+            caesar_transform("Zz".into(), 1, "encrypt".into(), false, "standard".into()).unwrap();
         assert_eq!(res, "Aa");
     }
 
@@ -204,15 +218,18 @@ mod tests {
     fn test_number_shift() {
         // 数字偏移开关测试
         // 关闭数字偏移
-        let res_off = caesar_transform("A1".into(), 1, "encrypt".into(), false, "standard".into()).unwrap();
+        let res_off =
+            caesar_transform("A1".into(), 1, "encrypt".into(), false, "standard".into()).unwrap();
         assert_eq!(res_off, "B1");
 
         // 开启数字偏移 (1 -> 2)
-        let res_on = caesar_transform("A1".into(), 1, "encrypt".into(), true, "standard".into()).unwrap();
+        let res_on =
+            caesar_transform("A1".into(), 1, "encrypt".into(), true, "standard".into()).unwrap();
         assert_eq!(res_on, "B2");
 
         // 数字回绕 (9 -> 0)
-        let res_wrap = caesar_transform("9".into(), 1, "encrypt".into(), true, "standard".into()).unwrap();
+        let res_wrap =
+            caesar_transform("9".into(), 1, "encrypt".into(), true, "standard".into()).unwrap();
         assert_eq!(res_wrap, "0");
     }
 
@@ -223,11 +240,13 @@ mod tests {
         // ROT18 = ROT13 (字母) + ROT5 (数字)
         // A -> N, 0 -> 5
         let input = "A0";
-        let encrypted = caesar_transform(input.into(), 0, "encrypt".into(), false, "rot18".into()).unwrap();
+        let encrypted =
+            caesar_transform(input.into(), 0, "encrypt".into(), false, "rot18".into()).unwrap();
         assert_eq!(encrypted, "N5");
 
         // 自反性测试：两次 ROT18 应该变回原样
-        let decrypted = caesar_transform(encrypted, 0, "encrypt".into(), false, "rot18".into()).unwrap();
+        let decrypted =
+            caesar_transform(encrypted, 0, "encrypt".into(), false, "rot18".into()).unwrap();
         assert_eq!(decrypted, input);
     }
 
@@ -236,11 +255,13 @@ mod tests {
         // ROT47 测试
         // 'a' (97) -> '2' (50)
         let input = "abc";
-        let encrypted = caesar_transform(input.into(), 0, "encrypt".into(), false, "rot47".into()).unwrap();
+        let encrypted =
+            caesar_transform(input.into(), 0, "encrypt".into(), false, "rot47".into()).unwrap();
         assert_eq!(encrypted, "234");
 
         // 自反性测试
-        let decrypted = caesar_transform(encrypted, 0, "encrypt".into(), false, "rot47".into()).unwrap();
+        let decrypted =
+            caesar_transform(encrypted, 0, "encrypt".into(), false, "rot47".into()).unwrap();
         assert_eq!(decrypted, input);
     }
 
@@ -282,9 +303,15 @@ mod tests {
         let best_match = &full_results[0];
         // 如果第一名不是 THE，打印出来看看是谁（便于调试），通常 THE 会是第一
         if best_match.text != expected_plain {
-            println!("Warning: Best match was {} ({}), expected {}", best_match.text, best_match.label, expected_plain);
+            println!(
+                "Warning: Best match was {} ({}), expected {}",
+                best_match.text, best_match.label, expected_plain
+            );
             // 如果评分系统非常不稳，可以改为在列表中查找
-            let target = full_results.iter().find(|r| r.text == expected_plain).expect("Should find THE in results");
+            let target = full_results
+                .iter()
+                .find(|r| r.text == expected_plain)
+                .expect("Should find THE in results");
             assert!(target.label.contains("Shift -7"));
         } else {
             assert_eq!(best_match.text, expected_plain);
@@ -310,7 +337,8 @@ mod tests {
     #[test]
     fn test_empty_input() {
         // 边界测试：空输入
-        let res = caesar_transform("".into(), 3, "encrypt".into(), false, "standard".into()).unwrap();
+        let res =
+            caesar_transform("".into(), 3, "encrypt".into(), false, "standard".into()).unwrap();
         assert_eq!(res, "");
     }
 }

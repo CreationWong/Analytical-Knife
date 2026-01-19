@@ -16,8 +16,7 @@ pub fn extended_gcd(a: &BigUint, b: &BigUint) -> (BigUint, i64, i64) {
 pub fn parse_biguint(s: &str) -> Result<BigUint, String> {
     let s = s.trim();
     if s.starts_with("0x") || s.starts_with("0X") {
-        BigUint::from_str_radix(&s[2..], 16)
-            .map_err(|_| format!("无效十六进制: {}", s))
+        BigUint::from_str_radix(&s[2..], 16).map_err(|_| format!("无效十六进制: {}", s))
     } else {
         BigUint::from_str(s)
             .or_else(|_| BigUint::from_str_radix(s, 16))
@@ -81,7 +80,8 @@ mod tests {
         assert!(result.is_ok());
 
         let plaintext_bytes = result.unwrap();
-        let plaintext_string = String::from_utf8(plaintext_bytes).expect("Decrypted bytes are not valid UTF-8");
+        let plaintext_string =
+            String::from_utf8(plaintext_bytes).expect("Decrypted bytes are not valid UTF-8");
 
         assert_eq!(plaintext_string, "NSSCTF{same_module_attack!}");
     }
@@ -89,9 +89,9 @@ mod tests {
     #[test]
     fn test_recover_plaintext_non_coprime() {
         let n = BigUint::from(100u32); // 模数 n
-        let e1 = BigUint::from(4u32);  // e1 = 4, gcd(4, 6) = 2
+        let e1 = BigUint::from(4u32); // e1 = 4, gcd(4, 6) = 2
         let c1 = BigUint::from(10u32);
-        let e2 = BigUint::from(6u32);  // e2 = 6
+        let e2 = BigUint::from(6u32); // e2 = 6
         let c2 = BigUint::from(20u32);
 
         let result = recover_plaintext(&n, &e1, &c1, &e2, &c2);
@@ -100,7 +100,7 @@ mod tests {
         let error_msg = result.unwrap_err();
         assert!(error_msg.contains("e1 与 e2 不互质"));
     }
-    
+
     #[test]
     fn test_extended_gcd_edge_cases() {
         // Case: a > 0, b = 0 -> gcd(a, 0) = a, x=1, y=0

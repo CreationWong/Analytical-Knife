@@ -1,7 +1,7 @@
 use rayon::prelude::*;
-use std::collections::{HashMap, HashSet};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Deserialize)]
 pub struct AnalysisConfig {
@@ -57,7 +57,10 @@ pub async fn analyze_text_advanced(config: AnalysisConfig) -> Result<AnalysisRes
     // 分词处理 (Word Frequency)
     let words: Vec<String> = if let Some(ref p) = config.split_pattern {
         if p.is_empty() {
-            processed_text.par_split_whitespace().map(|s| s.to_string()).collect()
+            processed_text
+                .par_split_whitespace()
+                .map(|s| s.to_string())
+                .collect()
         } else {
             let re = Regex::new(p).map_err(|e| format!("正则错误: {}", e))?;
             re.split(&processed_text)
@@ -66,29 +69,41 @@ pub async fn analyze_text_advanced(config: AnalysisConfig) -> Result<AnalysisRes
                 .collect()
         }
     } else {
-        processed_text.par_split_whitespace().map(|s| s.to_string()).collect()
+        processed_text
+            .par_split_whitespace()
+            .map(|s| s.to_string())
+            .collect()
     };
 
     // 过滤停用词
     let mut filtered_words = words;
     if config.use_stop_words {
         let mut stop_set: HashSet<String> = HashSet::new();
-        let defaults = vec!["the", "is", "at", "which", "on", "in", "a", "an", "to", "and", "or", "of", "for", "with"];
-        for d in defaults { stop_set.insert(d.to_string()); }
+        let defaults = vec![
+            "the", "is", "at", "which", "on", "in", "a", "an", "to", "and", "or", "of", "for",
+            "with",
+        ];
+        for d in defaults {
+            stop_set.insert(d.to_string());
+        }
 
         if let Some(custom) = config.stop_words_custom {
             for s in custom.split(',').map(|s| s.trim()) {
                 stop_set.insert(s.to_lowercase());
             }
         }
-        filtered_words = filtered_words.into_par_iter()
+        filtered_words = filtered_words
+            .into_par_iter()
             .filter(|w| !stop_set.contains(w))
             .collect();
     }
 
     let word_freq = calculate_word_freq(filtered_words);
 
-    Ok(AnalysisResponse { word_freq, char_freq })
+    Ok(AnalysisResponse {
+        word_freq,
+        char_freq,
+    })
 }
 
 fn calculate_char_freq(text: &str) -> Vec<FreqResult> {
@@ -100,7 +115,9 @@ fn calculate_char_freq(text: &str) -> Vec<FreqResult> {
             acc
         })
         .reduce(HashMap::new, |mut a, b| {
-            for (k, v) in b { *a.entry(k).or_insert(0) += v; }
+            for (k, v) in b {
+                *a.entry(k).or_insert(0) += v;
+            }
             a
         });
 
@@ -108,13 +125,16 @@ fn calculate_char_freq(text: &str) -> Vec<FreqResult> {
 }
 
 fn calculate_word_freq(words: Vec<String>) -> Vec<FreqResult> {
-    let word_counts: HashMap<String, usize> = words.into_par_iter()
+    let word_counts: HashMap<String, usize> = words
+        .into_par_iter()
         .fold(HashMap::new, |mut acc, w| {
             *acc.entry(w).or_insert(0) += 1;
             acc
         })
         .reduce(HashMap::new, |mut a, b| {
-            for (k, v) in b { *a.entry(k).or_insert(0) += v; }
+            for (k, v) in b {
+                *a.entry(k).or_insert(0) += v;
+            }
             a
         });
 
@@ -123,8 +143,11 @@ fn calculate_word_freq(words: Vec<String>) -> Vec<FreqResult> {
 
 fn finalize_freq(counts: HashMap<String, usize>) -> Vec<FreqResult> {
     let total: usize = counts.values().sum();
-    if total == 0 { return vec![]; }
-    let mut results: Vec<FreqResult> = counts.into_iter()
+    if total == 0 {
+        return vec![];
+    }
+    let mut results: Vec<FreqResult> = counts
+        .into_iter()
         .map(|(word, count)| FreqResult {
             word,
             count,

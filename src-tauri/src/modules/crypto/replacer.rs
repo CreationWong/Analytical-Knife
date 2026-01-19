@@ -21,7 +21,10 @@ pub fn batch_replace(text: String, rules_raw: String) -> Result<ReplaceResult, S
         .filter_map(|line| {
             let parts: Vec<&str> = line.split("->").collect();
             if parts.len() == 2 {
-                Some((parts[0].trim().chars().collect(), parts[1].trim().to_string()))
+                Some((
+                    parts[0].trim().chars().collect(),
+                    parts[1].trim().to_string(),
+                ))
             } else {
                 None
             }
@@ -40,13 +43,21 @@ pub fn batch_replace(text: String, rules_raw: String) -> Result<ReplaceResult, S
             let from_len = from_chars.len();
             if i + from_len <= input_chars.len() && &input_chars[i..i + from_len] == from_chars {
                 // 记录原文高亮位置
-                original_highlights.push(HighlightRange { start: i, end: i + from_len, rule_index: idx });
+                original_highlights.push(HighlightRange {
+                    start: i,
+                    end: i + from_len,
+                    rule_index: idx,
+                });
 
                 // 记录结果文本及其高亮位置
                 let r_start = replaced_content.chars().count();
                 replaced_content.push_str(to_str);
                 let r_end = replaced_content.chars().count();
-                replaced_highlights.push(HighlightRange { start: r_start, end: r_end, rule_index: idx });
+                replaced_highlights.push(HighlightRange {
+                    start: r_start,
+                    end: r_end,
+                    rule_index: idx,
+                });
 
                 i += from_len;
                 matched = true;
@@ -58,5 +69,9 @@ pub fn batch_replace(text: String, rules_raw: String) -> Result<ReplaceResult, S
             i += 1;
         }
     }
-    Ok(ReplaceResult { original_highlights, replaced_content, replaced_highlights })
+    Ok(ReplaceResult {
+        original_highlights,
+        replaced_content,
+        replaced_highlights,
+    })
 }
