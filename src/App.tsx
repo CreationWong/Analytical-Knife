@@ -1,4 +1,4 @@
-import { useState, Suspense, useMemo } from 'react';
+import {useState, Suspense, useMemo, useEffect} from 'react';
 import {
     AppShell,
     Burger,
@@ -37,6 +37,16 @@ export default function App() {
     // 状态管理
     const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
     const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
+
+    useEffect(() => {
+        // 生产环境禁用右键菜单
+        if (!import.meta.env.DEV) {
+            document.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                return false;
+            });
+        }
+    }, []);
 
     // 初始化 activeId：优先从本地存储读取，若无则默认为 'about'
     const [activeId, setActiveId] = useState<string>(() => {
