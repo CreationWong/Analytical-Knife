@@ -6,7 +6,7 @@ import {
     IconCode, IconHeartHandshake,
     IconInfoCircle,
     IconKey,
-    IconListCheck,
+    IconListCheck, IconLockAccess,
     IconLockCode, IconLockOpen, IconReplace, IconSettings,
     IconTerminal2
 } from "@tabler/icons-react";
@@ -48,6 +48,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconLockCode,
         path: '编码处理/Base/base64',
         component: lazy(() => import('../tools/Encode&Decode/Base64Tool')),
+    },
+
+    {
+        id: 'caesarCipher',
+        name: '凯撒密码',
+        description: '移位加解密与暴力破解',
+        icon: IconLockAccess,
+        path: '编码处理/ROT/caesarCipher',
+        component: lazy(() => import('../tools/Encode&Decode/CaesarCipher')),
     },
 
     {

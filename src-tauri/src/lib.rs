@@ -1,12 +1,13 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-mod module; // 声明 module 目录为一个模块
+mod modules; // 声明 modules 目录为一个模块
 
 // 导入模块
-use module::crypto::common_modulus::{parse_biguint, recover_plaintext};
-use module::crypto::word_freq::analyze_text_advanced;
-use module::crypto::big_rsa::solve_multi_layer_rsa;
-use module::crypto::replacer::batch_replace;
+use modules::crypto::common_modulus::{parse_biguint, recover_plaintext};
+use modules::crypto::word_freq::analyze_text_advanced;
+use modules::crypto::big_rsa::solve_multi_layer_rsa;
+use modules::crypto::replacer::batch_replace;
+use modules::crypto::caesar::{caesar_transform, caesar_crack};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -47,7 +48,9 @@ pub fn run() {
             analyze_text_advanced,
             common_modulus_attack,
             solve_multi_layer_rsa,
-            batch_replace
+            batch_replace,
+            caesar_transform,
+            caesar_crack,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
