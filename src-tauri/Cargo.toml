@@ -1,6 +1,6 @@
 [package]
 name = "Analytical_Knife"
-version = "0.6.0"
+version = "0.7.0"
 description = "CTF Toolbox"
 authors = ["CreationWong"]
 edition = "2021"
