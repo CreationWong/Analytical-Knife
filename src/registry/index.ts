@@ -7,7 +7,7 @@ import {
     IconInfoCircle,
     IconKey,
     IconListCheck, IconLockAccess,
-    IconLockCode, IconLockOpen, IconReplace, IconSettings,
+    IconLockCode, IconLockOpen, IconPhotoScan, IconReplace, IconSettings,
     IconTerminal2
 } from "@tabler/icons-react";
 
@@ -120,6 +120,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconKey,
         path: '密码学/vigenereCipher',
         component: lazy(() => import('../tools/Crypto/Vigenere.tsx')),
+    },
+
+    {
+        id: 'headerAnalyzer',
+        name: '图像结构显微镜',
+        description: '解析图像文件结构',
+        icon: IconPhotoScan,
+        path: 'Images/分析/headerAnalyzer',
+        component: lazy(() => import('../tools/Images/./ImageStructureAnalyzer'),),
     },
 
     {

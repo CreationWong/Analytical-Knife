@@ -33,4 +33,7 @@ image = "0.25"
 base64 = "0.22"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+kamadak-exif = "0.6"
+hex = "0.4"
+byteorder = "1.4"
 

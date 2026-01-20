@@ -15,5 +15,15 @@
     "fs:scope-download-recursive",
     "fs:scope-desktop-recursive",
     "fs:scope-document-recursive"
+  ],
+  "scopes": [
+    {
+      "allow": [
+        "$DESKTOP/**",
+        "$HOME/**",
+        "$DOWNLOADS/**",
+        "$PICTURES/**"
+      ]
+    }
   ]
 }
