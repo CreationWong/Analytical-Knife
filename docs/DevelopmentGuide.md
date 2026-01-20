@@ -90,11 +90,10 @@ mod tests {
 {
   id: 'myTool',                // 唯一标识 (驼峰命名)
   name: '转换工具',
-  description: '文字处理示例',   // (可选)小标题，建议 10 字以内
+  description: '文字处理示例',   // 建议 10 字以内
   icon: IconAlphabetUppercase, // 仅限 tabler.io/icons
   path: 'Text/Basic/myTool',   // 菜单路径：分类/子类/ID
   component: lazy(() => import('../tools/Example/MyTool')),
-  windowMaxWidth: 'none',	// (可选)定义主内容区域边框大小，默认 1200px，输入 none 为适应窗口大小
 }
 ```
 
