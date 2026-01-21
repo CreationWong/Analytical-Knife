@@ -1,6 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Stack, Button, Textarea, Table, Paper, ScrollArea, Badge, Group, Text, TextInput, Modal, Code, Tabs, ActionIcon } from '@mantine/core';
-import { IconFileSearch, IconFileUpload, IconFilter, IconTerminal, IconInfoCircle, IconTrash, IconChevronRight } from '@tabler/icons-react';
+import {
+    Stack, Button, Textarea, Table, Paper, ScrollArea, Badge, Group, Text,
+    Autocomplete, Modal, Code, Tabs, ActionIcon
+} from '@mantine/core';
+import {
+    IconFileSearch, IconFileUpload, IconFilter, IconTerminal,
+    IconInfoCircle, IconTrash, IconChevronRight, IconCommand
+} from '@tabler/icons-react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useDisclosure } from '@mantine/hooks';
@@ -27,7 +33,16 @@ export default function LogAnalyzer() {
     const [selectedEntry, setSelectedEntry] = useState<LogEntry | null>(null);
     const [opened, { open: openModal, close: closeModal }] = useDisclosure(false);
 
-    // Wireshark 过滤器引擎
+    // --- Wireshark 过滤器提示数据 ---
+    const suggestions = [
+        { value: 'ip', description: 'IP 地址' },
+        { value: 'http.status', description: 'HTTP 状态码' },
+        { value: 'http.method', description: '请求方法' },
+        { value: 'http.uri contains ""', description: 'URL 包含关键词' },
+        { value: 'frame.time', description: '时间访问' },
+    ];
+
+    // --- 过滤器解析引擎 ---
     const filteredData = useMemo(() => {
         if (!filterQuery.trim()) return data;
         return data.filter(item => {
@@ -40,14 +55,20 @@ export default function LogAnalyzer() {
                     if (c.includes('http.method ==')) return item.method.toLowerCase() === c.split('==')[1].trim().replace(/"/g, '');
                     if (c.includes('http.uri contains')) return item.path.toLowerCase().includes(c.split('contains')[1].trim().replace(/"/g, ''));
                     if (c.includes('frame.time >')) return item.timestamp > c.split('>')[1].trim().replace(/"/g, '');
+                    if (c.includes('frame.time <')) return item.timestamp < c.split('<')[1].trim().replace(/"/g, '');
+                    // 默认匹配路径或原始日志
                     return item.path.toLowerCase().includes(c) || item.raw.toLowerCase().includes(c);
                 };
-                return query.includes('&&') ? query.split('&&').every(checkMatch) : checkMatch(query);
+
+                if (query.includes('&&')) return query.split('&&').every(part => checkMatch(part));
+                if (query.includes('||')) return query.split('||').some(part => checkMatch(part));
+                return checkMatch(query);
             } catch { return true; }
         });
     }, [data, filterQuery]);
 
-    const onParse = async (content: string) => {
+    // --- 通用解析逻辑 ---
+    const onHandleParse = async (content: string) => {
         if (!content.trim()) return;
         setLoading(true);
         try {
@@ -59,10 +80,11 @@ export default function LogAnalyzer() {
 
     return (
         <Stack gap="sm">
+            {/* 1. 输入控制面板 */}
             <Paper withBorder p="xs" bg="var(--mantine-color-default-hover)">
                 <Stack gap="xs">
                     <Textarea
-                        placeholder="粘贴原始日志..."
+                        placeholder="在此粘贴 Nginx/Apache 原始日志文本..."
                         minRows={3}
                         maxRows={6}
                         autosize
@@ -82,22 +104,36 @@ export default function LogAnalyzer() {
                                     } catch (err) { handleAppError(err); }
                                     finally { setLoading(false); }
                                 }
-                            }}>上传文件</Button>
-                            {data.length > 0 && <ActionIcon variant="subtle" color="red" onClick={() => {setData([]); setRawText('');}}><IconTrash size={16}/></ActionIcon>}
+                            }}>上传并解析文件</Button>
+                            {data.length > 0 && (
+                                <ActionIcon variant="subtle" color="red" onClick={() => { setData([]); setRawText(''); }}>
+                                    <IconTrash size={16} />
+                                </ActionIcon>
+                            )}
                         </Group>
-                        <Button size="xs" color={settings.primaryColor} leftSection={<IconFileSearch size={14} />} onClick={() => onParse(rawText)} loading={loading}>分析</Button>
+                        <Button size="xs" color={settings.primaryColor} leftSection={<IconFileSearch size={14} />} onClick={() => onHandleParse(rawText)} loading={loading}>立即分析</Button>
                     </Group>
                 </Stack>
             </Paper>
 
+            {/* 2. 过滤与表格区 */}
             {data.length > 0 && (
                 <Stack gap="xs">
-                    <TextInput
+                    <Autocomplete
                         size="xs"
-                        placeholder='过滤器: ip == "127.0.0.1" && http.status == 200'
+                        label="过滤器"
+                        placeholder='输入表达式...'
                         leftSection={<IconFilter size={14} />}
+                        rightSection={<IconCommand size={14} style={{ opacity: 0.5 }} />}
                         value={filterQuery}
-                        onChange={(e) => setFilterQuery(e.currentTarget.value)}
+                        onChange={setFilterQuery}
+                        data={suggestions}
+                        renderOption={({ option }) => (
+                            <Group gap="xs" wrap="nowrap">
+                                <Code fw={700} variant="light">{option.value.split(' ')[0]}</Code>
+                                <Text size="xs" c="dimmed">{suggestions.find(s => s.value === option.value)?.description}</Text>
+                            </Group>
+                        )}
                     />
 
                     <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
@@ -130,9 +166,7 @@ export default function LogAnalyzer() {
                                                     {item.status}
                                                 </Badge>
                                             </Table.Td>
-                                            <Table.Td>
-                                                <IconChevronRight size={14} style={{ opacity: 0.3 }} />
-                                            </Table.Td>
+                                            <Table.Td><IconChevronRight size={14} style={{ opacity: 0.3 }} /></Table.Td>
                                         </Table.Tr>
                                     ))}
                                 </Table.Tbody>
@@ -142,12 +176,13 @@ export default function LogAnalyzer() {
                 </Stack>
             )}
 
-            <Modal opened={opened} onClose={closeModal} title="详细信息" size="xl" centered>
+            {/* 3. 详情 Modal */}
+            <Modal opened={opened} onClose={closeModal} title="条目详细信息" size="xl" centered>
                 {selectedEntry && (
                     <Tabs defaultValue="structured" color={settings.primaryColor}>
                         <Tabs.List mb="md">
-                            <Tabs.Tab value="structured" leftSection={<IconInfoCircle size={14} />}>解析详情</Tabs.Tab>
-                            <Tabs.Tab value="raw" leftSection={<IconTerminal size={14} />}>原始日志</Tabs.Tab>
+                            <Tabs.Tab value="structured" leftSection={<IconInfoCircle size={14} />}>结构化详情</Tabs.Tab>
+                            <Tabs.Tab value="raw" leftSection={<IconTerminal size={14} />}>原始日志行</Tabs.Tab>
                         </Tabs.List>
 
                         <Tabs.Panel value="structured">
@@ -156,7 +191,7 @@ export default function LogAnalyzer() {
                                 <DetailRow label="客户端 IP" value={selectedEntry.ip} />
                                 <DetailRow label="请求方法" value={selectedEntry.method} />
                                 <DetailRow label="响应状态" value={selectedEntry.status} color={selectedEntry.status.startsWith('2') ? 'green' : 'red'} />
-                                <DetailRow label="资源路径" value={selectedEntry.path} isCode />
+                                <DetailRow label="解码路径" value={selectedEntry.path} isCode />
                                 <DetailRow label="User-Agent" value={selectedEntry.ua} isCode />
                             </Stack>
                         </Tabs.Panel>
@@ -176,8 +211,12 @@ export default function LogAnalyzer() {
 function DetailRow({ label, value, isCode, color }: { label: string, value: string, isCode?: boolean, color?: string }) {
     return (
         <Group wrap="nowrap" align="start">
-            <Text size="xs" fw={700} w={100} c="dimmed">{label}</Text>
-            {isCode ? <Code style={{ flex: 1, fontSize: '12px' }}>{value}</Code> : <Text size="sm" fw={500} c={color}>{value}</Text>}
+            <Text size="xs" fw={700} w={100} c="dimmed" style={{ flexShrink: 0 }}>{label.toUpperCase()}</Text>
+            {isCode ? (
+                <Code style={{ flex: 1, fontSize: '12px', wordBreak: 'break-all' }}>{value}</Code>
+            ) : (
+                <Text size="sm" fw={500} c={color}>{value}</Text>
+            )}
         </Group>
     );
 }

@@ -3,7 +3,7 @@ import { ToolDefinition } from './types';
 import {
     IconBrush,
     IconBug, IconChartBar,
-    IconCode, IconFileAnalytics, IconGhost, IconHeartHandshake,
+    IconCode, IconFileAnalytics, IconFilter, IconGhost, IconHeartHandshake,
     IconInfoCircle,
     IconKey,
     IconListCheck, IconLockAccess,
@@ -150,15 +150,6 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
     },
 
     {
-        id: 'curlCommandGenerator',
-        name: 'Curl 命令生成器',
-        description: 'curl 构造器',
-        icon: IconTerminal2,
-        path: '网络工具/API/curlCommandGenerator',
-        component: lazy(() => import('../tools/Network/CurlCommandGenerator')),
-    },
-
-    {
         id: 'payloadWebshellGenerator',
         name: 'Webshell 生成器',
         description: '支持多种编程语言、免杀混淆及工具适配的 Webshell 生成器',
@@ -183,6 +174,24 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconBug,
         path: '生成器/漏洞测试/xssGenerator',
         component: lazy(() => import('../tools/Security/XSSGenerator.tsx')),
+    },
+
+    {
+        id: 'wiresharkGen',
+        name: 'Wireshark 语法构建器',
+        description: '快速构建流量过滤表达式',
+        icon: IconFilter,
+        path: '生成器/网络工具/Wireshark',
+        component: lazy(() => import('../tools/Security/TrafficFilter')),
+    },
+
+    {
+        id: 'curlCommandGenerator',
+        name: 'Curl 命令生成器',
+        description: 'curl 构造器',
+        icon: IconTerminal2,
+        path: '生成器/网络工具/curlCommandGenerator',
+        component: lazy(() => import('../tools/Security/CurlCommandGenerator.tsx')),
     },
 
     {
