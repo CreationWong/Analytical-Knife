@@ -9,9 +9,8 @@ import {
 } from '@tabler/icons-react';
 import { useAppSettings } from '../../hooks/useAppSettings';
 
-// --- 1. 配置词典 ---
+// --- 配置词典 ---
 const PROTOCOL_DICT = [
-    // 常用协议名
     { value: 'http', label: 'HTTP 协议' },
     { value: 'tcp', label: 'TCP 协议' },
     { value: 'udp', label: 'UDP 协议' },
@@ -20,8 +19,6 @@ const PROTOCOL_DICT = [
     { value: 'dns', label: 'DNS 协议' },
     { value: 'ssl', label: 'SSL/TLS 协议' },
     { value: 'telnet', label: 'Telnet 协议' },
-
-    // 详细字段映射
     { value: 'tcp.port', label: 'TCP 端口' },
     { value: 'tcp.flags.syn', label: 'TCP 同步包(SYN)' },
     { value: 'http.host', label: 'HTTP 域名' },
@@ -33,13 +30,9 @@ const PROTOCOL_DICT = [
     { value: 'http.cookie', label: 'cookie' },
     { value: 'dns.qry.name', label: 'DNS 查询域名' },
     { value: 'ssl.handshake.type', label: 'TLS 握手类型' },
-
-    // 传输层协议及字段
     { value: 'sctp', label: 'SCTP 流控制传输协议' },
     { value: 'sctp.port', label: 'SCTP 端口' },
     { value: 'sctp.chan', label: 'SCTP 块类型' },
-
-    // 网络层协议及字段
     { value: 'ipv6', label: 'IPv6 协议' },
     { value: 'ipv6.addr', label: 'IPv6 地址' },
     { value: 'ipv6.src', label: '源 IPv6 地址' },
@@ -49,8 +42,6 @@ const PROTOCOL_DICT = [
     { value: 'ospf', label: 'OSPF 开放最短路径优先协议' },
     { value: 'bgp', label: 'BGP 边界网关协议' },
     { value: 'rip', label: 'RIP 路由信息协议' },
-
-    // 应用层协议及字段
     { value: 'ftp', label: 'FTP 文件传输协议' },
     { value: 'ftp.request.command', label: 'FTP 请求命令' },
     { value: 'ftp.response.code', label: 'FTP 响应码' },
@@ -90,8 +81,6 @@ const PROTOCOL_DICT = [
     { value: 'mysql.query', label: 'MySQL 查询语句' },
     { value: 'mqtt.msgtype', label: 'MQTT 消息类型' },
     { value: 'modbus.func', label: 'Modbus 功能码' },
-
-    // TCP 标志位和其他字段
     { value: 'tcp.flags.ack', label: 'TCP 确认包(ACK)' },
     { value: 'tcp.flags.psh', label: 'TCP 推送包(PSH)' },
     { value: 'tcp.flags.fin', label: 'TCP 结束包(FIN)' },
@@ -103,12 +92,8 @@ const PROTOCOL_DICT = [
     { value: 'tcp.ack', label: 'TCP 确认号' },
     { value: 'tcp.window_size', label: 'TCP 窗口大小' },
     { value: 'tcp.len', label: 'TCP 载荷长度' },
-
-    // UDP 字段
     { value: 'udp.port', label: 'UDP 端口' },
     { value: 'udp.length', label: 'UDP 长度' },
-
-    // IP 字段
     { value: 'ip.addr', label: 'IP 地址' },
     { value: 'ip.src', label: '源 IP 地址' },
     { value: 'ip.dst', label: '目的 IP 地址' },
@@ -118,8 +103,6 @@ const PROTOCOL_DICT = [
     { value: 'ip.len', label: 'IP 总长度' },
     { value: 'ip.hdr_len', label: 'IP 头部长度' },
     { value: 'ip.dsfield', label: 'IP 服务类型(DSCP/ECN)' },
-
-    // 以太网和帧相关
     { value: 'eth', label: '以太网协议' },
     { value: 'eth.src', label: '源 MAC 地址' },
     { value: 'eth.dst', label: '目的 MAC 地址' },
@@ -131,23 +114,32 @@ const PROTOCOL_DICT = [
     { value: 'frame.cap_len', label: '数据包捕获长度' },
 ];
 
+// 逻辑符号映射
 const OP_DICT: Record<string, string> = {
-    '==': '等于',
-    'eq': '等于',
-    '!=': '不等于',
-    'ne': '不等于',
-    'contains': '包含',
+    '==': '==', 'eq': '==',
+    '!=': '!=', 'ne': '!=',
+    'contains': 'contains',
+    'matches': '~ (matches)',
+    '>': '>', 'gt': '>',
+    '<': '<', 'lt': '<',
+    '>=': '>=', 'ge': '>=',
+    '<=': '<=', 'le': 'le',
+    'exists': 'exists',
+    '!': '!'
+};
+
+// 中文说明映射 (仅用于 UI 辅助提示)
+const OP_DESCR: Record<string, string> = {
+    '==': '等于', 'eq': '等于',
+    '!=': '不等于', 'ne': '不等于',
+    'contains': '包含内容',
     'matches': '正则匹配',
-    '>': '大于',
-    'gt': '大于',
-    '<': '小于',
-    'lt': '小于',
-    '>=': '大于等于',
-    'ge': '大于等于',
-    '<=': '小于等于',
-    'le': '小于等于',
-    'exists': '仅协议',
-    '!': '排除'
+    '>': '大于', 'gt': '大于',
+    '<': '小于', 'lt': '小于',
+    '>=': '大于等于', 'ge': '大于等于',
+    '<=': '小于等于', 'le': '小于等于',
+    'exists': '协议/字段存在',
+    '!': '排除该协议'
 };
 
 const LOGIC_DICT: Record<string, string> = {
@@ -185,11 +177,17 @@ const NodeRow = ({
                 <Group grow wrap="nowrap" gap="xs">
                     {index > 0 && (
                         <Select
-                            size="xs" w={75} flex="none"
+                            size="xs" w={70} flex="none"
                             data={['&&', '||']}
                             value={node.logic}
                             onChange={(v) => updateNode(node.id, { logic: v as LogicOp })}
-                            styles={{ input: { fontWeight: 700, color: 'var(--mantine-color-blue-filled)' } }}
+                            styles={{
+                                input: {
+                                    fontWeight: 800,
+                                    color: 'var(--mantine-color-blue-filled)',
+                                    textAlign: 'center'
+                                }
+                            }}
                         />
                     )}
 
@@ -213,10 +211,17 @@ const NodeRow = ({
                                 leftSection={<IconSearch size={12} />}
                             />
                             <Select
-                                size="xs" w={120} flex="none"
+                                size="xs" w={150} flex="none"
                                 data={Object.entries(OP_DICT).map(([k, v]) => ({ value: k, label: v }))}
                                 value={node.op}
                                 onChange={(v) => updateNode(node.id, { op: v || '==' })}
+                                renderOption={({ option }) => (
+                                    <Group justify="space-between" wrap="nowrap" style={{ width: '100%' }}>
+                                        <Text size="xs" fw={700} style={{ fontFamily: 'monospace' }}>{option.value}</Text>
+                                        <Text size="10px" c="dimmed">{OP_DESCR[option.value] || ''}</Text>
+                                    </Group>
+                                )}
+                                styles={{ input: { fontFamily: 'monospace', fontWeight: 700 } }}
                             />
                             {!isProtocolOnly && (
                                 <TextInput
@@ -230,10 +235,9 @@ const NodeRow = ({
                     ) : (
                         <Group gap="xs" flex={1}>
                             <Text size="xs" fw={700} c={isNegatedGroup ? 'red' : settings.primaryColor}>
-                                {isNegatedGroup ? '[ 排除分组 !(...) ]' : '[ 逻辑分组 (...) ]'}
+                                {isNegatedGroup ? '!( ... )' : '( ... )'}
                             </Text>
-                            {/* 分组切换取反逻辑的按钮 */}
-                            <Tooltip label={isNegatedGroup ? "取消排除" : "设为排除分组"}>
+                            <Tooltip label={isNegatedGroup ? "取消取反" : "设为排除分组"}>
                                 <ActionIcon
                                     size="xs"
                                     variant="outline"
@@ -274,15 +278,12 @@ export default function WiresharkUltraTool() {
     const [rawInput, setRawInput] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-    // --- 解析逻辑 ---
+    // 解析逻辑 (增强对 eq/ne 等字符操作符的支持)
     const handleAnalyze = () => {
         if (!rawInput.trim()) return;
         try {
-            // 核心修复：更新正则。
-            // 1. 优先匹配比较操作符 (==, !=, <=, >=, <, >)
-            // 2. 匹配逻辑符 (&&, ||, !, and, or)
-            // 3. 匹配带引号的字符串或普通单词
-            const tokens = rawInput.match(/&&|\|\||<=|>=|==|!=|\(|\)|!|<|>|and|or|matches|contains|[^\s()&|!<>=]+|"[^"]*"/g) || [];
+            // 正则包含 eq|ne|gt|lt|ge|le
+            const tokens = rawInput.match(/&&|\|\||<=|>=|==|!=|\(|\)|!|<|>|and|or|matches|contains|eq|ne|gt|lt|ge|le|[^\s()&|!<>=]+|"[^"]*"/g) || [];
 
             let i = 0;
             const parseRecursive = (): FilterNode[] => {
@@ -312,10 +313,8 @@ export default function WiresharkUltraTool() {
                     } else if (token === '!') {
                         nextIsNegated = true; i++;
                     } else {
-                        // 动态步进解析：
                         const field = token;
                         const nextToken = tokens[i + 1];
-                        // 检查下一个 token 是否在我们的操作符词典中
                         const isOp = nextToken && Object.keys(OP_DICT).includes(nextToken);
 
                         if (isOp) {
@@ -326,9 +325,8 @@ export default function WiresharkUltraTool() {
                                 type: 'condition', logic: currentLogic,
                                 field, op, val
                             });
-                            i += 3; // 消耗了 field, op, val
+                            i += 3;
                         } else {
-                            // 如果没有操作符，视为“协议存在”
                             nodes.push({
                                 id: Math.random().toString(36).substring(7),
                                 type: 'condition', logic: currentLogic,
@@ -349,7 +347,6 @@ export default function WiresharkUltraTool() {
         }
     };
 
-    // --- 树更新逻辑 ---
     const updateNode = (id: string, data: Partial<FilterNode>) => {
         const mapNodes = (nodes: FilterNode[]): FilterNode[] => nodes.map(n =>
             n.id === id ? { ...n, ...data } : { ...n, children: n.children ? mapNodes(n.children) : undefined }
@@ -380,7 +377,6 @@ export default function WiresharkUltraTool() {
         if (tree.length > 1 || tree[0].id !== id) setTree(filter(tree));
     };
 
-    // --- 生成逻辑 ---
     const generatedFilter = useMemo(() => {
         const gen = (nodes: FilterNode[]): string => nodes.map((n, i) => {
             const prefix = i === 0 ? '' : ` ${n.logic} `;
@@ -403,32 +399,28 @@ export default function WiresharkUltraTool() {
             const fieldLabel = PROTOCOL_DICT.find(d => d.value === n.field)?.label || n.field;
             if (n.op === 'exists') return `${logicText}捕获 ${fieldLabel}`;
             if (n.op === '!') return `${logicText}排除 ${fieldLabel}`;
-            return `${logicText}${fieldLabel} ${OP_DICT[n.op]} "${n.val || '空'}"`;
+            // 翻译时将 eq 等转换回中文易懂形式
+            const opLabel = OP_DESCR[n.op] || n.op;
+            return `${logicText}${fieldLabel} ${opLabel} "${n.val || '空'}"`;
         }).join('');
         return translate(tree);
     }, [tree]);
 
     return (
-        <Stack gap="lg">
+        <Stack gap="lg" style={{ width: '100%', minHeight: '100%' }}>
             <Group justify="space-between">
                 <Group gap="xs"><IconVariable size={24} color={`var(--mantine-color-${settings.primaryColor}-filled)`} />
                     <Title order={4}>Wireshark 语法构建器</Title>
-                    <Badge
-                        variant="dot"
-                        color="green"
-                        size="md"
-                        radius="xl"
-                        styles={{ root: { textTransform: 'none' } }}
-                    >
-                        字典库: V1.0
+                    <Badge variant="dot" color="green" size="md" radius="xl" styles={{ root: { textTransform: 'none' } }}>
+                        字典库: V1.1
                     </Badge>
                 </Group>
             </Group>
 
             <Paper withBorder p="md" radius="md">
-                <Text size="xs" fw={700} mb={5} c="dimmed">解析命令</Text>
+                <Text size="xs" fw={700} mb={5} c="dimmed">解析命令 (支持 &&, eq, matches 等)</Text>
                 <Group align="flex-start">
-                    <Textarea flex={1} value={rawInput} onChange={(e) => setRawInput(e.currentTarget.value)} placeholder='在此粘贴 Wireshark 过滤器' />
+                    <Textarea flex={1} value={rawInput} onChange={(e) => setRawInput(e.currentTarget.value)} placeholder='例如: http.request.method == "GET" && tcp.port eq 80' />
                     <Button leftSection={<IconAnalyze size={16} />} onClick={handleAnalyze} color={settings.primaryColor}>分析并载入树</Button>
                 </Group>
                 {error && <Alert icon={<IconAlertCircle size={16} />} color="red" mt="sm" variant="light" py={5}>{error}</Alert>}
@@ -455,7 +447,7 @@ export default function WiresharkUltraTool() {
                             )}
                         </CopyButton>
                     </Group>
-                    <Code block fz="md">{generatedFilter || '...'}</Code>
+                    <Code block fz="md" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{generatedFilter || '...'}</Code>
                 </Paper>
 
                 <Paper withBorder p="md" radius="md" style={{ borderLeft: `4px solid var(--mantine-color-${settings.primaryColor}-filled)` }}>

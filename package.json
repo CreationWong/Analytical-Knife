@@ -1,7 +1,7 @@
 {
   "name": "analytical_knife",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -24,7 +24,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "semver": "^7.7.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

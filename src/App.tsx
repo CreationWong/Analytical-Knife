@@ -155,9 +155,6 @@ export default function App() {
     // 2. 如果没定义，默认使用 1200
     const currentMaxWidth = activeTool?.windowMaxWidth !== undefined ? activeTool.windowMaxWidth : 1200;
 
-    // 确定内边距：如果是全屏模式（none），则去掉内边距
-    const contentPadding = currentMaxWidth === 'none' ? 0 : 'md';
-
     return (
         <AppShell
             header={{ height: 60 }}
@@ -228,15 +225,30 @@ export default function App() {
             </AppShell.Navbar>
 
             {/* 主内容区域 */}
-            <AppShell.Main bg="var(--mantine-color-body)">
+            <AppShell.Main
+                bg="var(--mantine-color-body)"
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: '100vh' // 确保背景色撑满全屏
+                }}
+            >
                 <ToolErrorBoundary key={activeId}>
-                    <Suspense fallback={<Loader />}>
+                    <Suspense fallback={
+                        <Group justify="center" mt="xl">
+                            <Loader size="lg" variant="dots" />
+                        </Group>
+                    }>
                         <Box
-                            p={contentPadding}
-                            maw={currentMaxWidth === 'none' ? '100%' : currentMaxWidth}
-                            mx="auto"
                             style={{
-                                height: currentMaxWidth === 'none' ? 'calc(100vh - 100px)' : 'auto',    // calc(100vh - 100px) 防止出现滚动条
+                                // 如果是全屏模式，去掉内边距并撑满
+                                padding: currentMaxWidth === 'none' ? 0 : 'var(--mantine-spacing-md)',
+                                // 动态最大宽度
+                                maxWidth: currentMaxWidth === 'none' ? '100%' : `${currentMaxWidth}px`,
+                                width: '100%',
+                                marginLeft: 'auto',
+                                marginRight: 'auto',
+                                flex: 1, // 让内容区域自动撑开
                                 display: 'flex',
                                 flexDirection: 'column'
                             }}
@@ -244,9 +256,9 @@ export default function App() {
                             {activeTool ? (
                                 <activeTool.component />
                             ) : (
-                                <Stack align="center" mt={100}>
+                                <Stack align="center" mt={100} gap="sm">
                                     <IconInfoCircle size={48} color="var(--mantine-color-gray-4)" />
-                                    <Text c="dimmed">未找到该工具，请重新选择</Text>
+                                    <Text c="dimmed" fw={500}>未找到该工具，请在侧边栏重新选择</Text>
                                 </Stack>
                             )}
                         </Box>
