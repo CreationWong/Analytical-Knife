@@ -3,7 +3,7 @@ import { ToolDefinition } from './types';
 import {
     IconBrush,
     IconBug, IconChartBar,
-    IconCode, IconGhost, IconHeartHandshake,
+    IconCode, IconFileAnalytics, IconGhost, IconHeartHandshake,
     IconInfoCircle,
     IconKey,
     IconListCheck, IconLockAccess,
@@ -138,6 +138,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconGhost,
         path: 'Images/隐写/mirageTank',
         component: lazy(() => import('../tools/Images/MirageTank')),
+    },
+
+    {
+        id: 'logAnalyzer',
+        name: '日志解析器',
+        description: '快速解析标准 HTTP 访问日志',
+        icon: IconFileAnalytics,
+        path: '网络工具/分析/logAnalyzer',
+        component: lazy(() => import('../tools/Network/LogAnalyzer')),
     },
 
     {

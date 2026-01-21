@@ -11,6 +11,7 @@ use modules::crypto::word_freq::analyze_text_advanced;
 use modules::encode_decode::vigenere::{crack_vigenere_auto, vigenere_cipher};
 use modules::images::mirage_tank::generate_mirage_tank;
 use modules::images::image_structure_analyzer::{analyze_image_header, get_supported_templates};
+use modules::network::log_analyzer::{parse_log_content, read_and_parse_log};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -71,6 +72,8 @@ pub fn run() {
             generate_mirage_tank,
             analyze_image_header,
             get_supported_templates,
+            parse_log_content,
+            read_and_parse_log,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
