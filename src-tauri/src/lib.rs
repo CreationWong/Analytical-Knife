@@ -12,6 +12,7 @@ use modules::encode_decode::vigenere::{crack_vigenere_auto, vigenere_cipher};
 use modules::images::mirage_tank::generate_mirage_tank;
 use modules::images::image_structure_analyzer::{analyze_image_header, get_supported_templates};
 use modules::network::log_analyzer::{parse_log_content, read_and_parse_log};
+use modules::media::ffmpeg::*;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -74,6 +75,8 @@ pub fn run() {
             get_supported_templates,
             parse_log_content,
             read_and_parse_log,
+            check_ffmpeg,
+            run_ffmpeg_stream,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,7 +8,7 @@ import {
     IconKey,
     IconListCheck, IconLockAccess,
     IconLockCode, IconLockOpen, IconPhotoScan, IconReplace, IconSettings,
-    IconTerminal2
+    IconTerminal2, IconVideo
 } from "@tabler/icons-react";
 
 export const TOOLS_REGISTRY: ToolDefinition[] = [
@@ -138,6 +138,16 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconGhost,
         path: 'Images/隐写/mirageTank',
         component: lazy(() => import('../tools/Images/MirageTank')),
+    },
+
+    {
+        id: 'ffmpegTool',
+        name: '视频处理',
+        description: 'ffmpeg',
+        path: '视频/视频处理/ffmpegTool',
+        icon: IconVideo,
+        component: lazy(() => import('../tools/Media/FFmpegTool')),
+        windowMaxWidth: 'none'
     },
 
     {
