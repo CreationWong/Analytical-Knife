@@ -3,7 +3,7 @@ import { ToolDefinition } from './types';
 import {
     IconBrush,
     IconBug, IconChartBar,
-    IconCode, IconFileAnalytics, IconFilter, IconGhost, IconHeartHandshake,
+    IconCode, IconFileAnalytics, IconFilter, IconGhost, IconHeartHandshake, IconImageInPicture,
     IconInfoCircle,
     IconKey,
     IconListCheck, IconLockAccess,
@@ -128,7 +128,16 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         description: '解析图像文件结构',
         icon: IconPhotoScan,
         path: 'Images/分析/headerAnalyzer',
-        component: lazy(() => import('../tools/Images/./ImageStructureAnalyzer'),),
+        component: lazy(() => import('../tools/Images/ImageStructureAnalyzer'),),
+    },
+
+    {
+        id: 'WHEditUnit',
+        name: '宽高编辑器器',
+        description: '图像文件宽高修改',
+        icon: IconImageInPicture,
+        path: 'Images/隐写/WHEditUnit',
+        component: lazy(() => import('../tools/Images/WHEditUnit'),),
     },
 
     {
