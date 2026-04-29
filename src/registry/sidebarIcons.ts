@@ -28,5 +28,5 @@ export const PARENT_ICONS: Record<string, IconComponent> = {
     'CTF': IconTrophy,
     '辅助': IconTools,
     '分析': IconSearch,
-    '视频': IconVideo,
+    'Videos': IconVideo,
 };

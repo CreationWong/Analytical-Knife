@@ -2,6 +2,8 @@
 
 mod modules; // 声明 modules 目录为一个模块
 
+use std::sync::Arc;
+
 // 导入模块
 use modules::crypto::big_rsa::solve_multi_layer_rsa;
 use modules::crypto::caesar::{caesar_crack, caesar_transform};
@@ -9,10 +11,10 @@ use modules::crypto::common_modulus::{parse_biguint, recover_plaintext};
 use modules::crypto::replacer::batch_replace;
 use modules::crypto::word_freq::analyze_text_advanced;
 use modules::encode_decode::vigenere::{crack_vigenere_auto, vigenere_cipher};
-use modules::images::mirage_tank::generate_mirage_tank;
 use modules::images::image_structure_analyzer::{analyze_image_header, get_supported_templates};
-use modules::network::log_analyzer::{parse_log_content, read_and_parse_log};
+use modules::images::mirage_tank::generate_mirage_tank;
 use modules::media::ffmpeg::*;
+use modules::network::log_analyzer::{parse_log_content, read_and_parse_log};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -60,6 +62,9 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(FfmpegProcess(
+            Arc::new(tokio::sync::Mutex::new(None))
+        ))
         .invoke_handler(tauri::generate_handler![
             greet,
             analyze_text_advanced,
@@ -77,6 +82,7 @@ pub fn run() {
             read_and_parse_log,
             check_ffmpeg,
             run_ffmpeg_stream,
+            stop_ffmpeg_native,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

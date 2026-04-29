@@ -142,9 +142,9 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
 
     {
         id: 'ffmpegTool',
-        name: '视频处理',
-        description: 'ffmpeg',
-        path: '视频/视频处理/ffmpegTool',
+        name: 'FFmpeg',
+        description: 'ffmpeg 处理工具',
+        path: 'Videos/视频处理/ffmpegTool',
         icon: IconVideo,
         component: lazy(() => import('../tools/Media/FFmpegTool')),
         windowMaxWidth: 'none'
