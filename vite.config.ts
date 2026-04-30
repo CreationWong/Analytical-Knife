@@ -1,12 +1,14 @@
+// @ts-ignore
+
 import {defineConfig} from "vite";
 import react from "@vitejs/plugin-react";
 import pkg from './package.json';
+import path from 'path'
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 /**
- *  版本号处理逻辑
+ * 版本号处理逻辑
  */
 // 版本号解析逻辑
 const Version = 'V' + pkg.version;
@@ -37,6 +39,27 @@ export default defineConfig(async () => ({
             // 3. tell Vite to ignore watching `src-tauri`
             ignored: ["**/src-tauri/**"],
         },
+        // 4. 配置跨域隔离响应头，以支持 FFmpeg.wasm 运行所需的 SharedArrayBuffer
+        headers: {
+            'Cross-Origin-Opener-Policy': 'same-origin',
+            'Cross-Origin-Embedder-Policy': 'require-corp',
+        },
+    },
+
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, './src'),
+        },
+    },
+
+    // 5. 优化依赖排除：防止 Vite 预编译导致的 FFmpeg Worker 路径丢失问题
+    optimizeDeps: {
+        exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
+    },
+
+    // 6. 构建目标配置：支持 Top-level await 等现代特性
+    build: {
+        target: 'esnext',
     },
 
     define: {

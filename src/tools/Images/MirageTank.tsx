@@ -37,9 +37,9 @@ import {
     IconMoon,
     IconSun
 } from '@tabler/icons-react';
-import { handleAppError } from '../../utils/error';
-import { useAppSettings } from '../../hooks/useAppSettings';
-import { saveBase64File } from '../../utils/fileSave';
+import { handleAppError } from '@/utils/error';
+import { useAppSettings } from '@/hooks/useAppSettings.ts';
+import { saveBase64File } from '@/utils/fileSave.ts';
 
 // === 常量定义 ===
 const CHECKERBOARD_STYLE = {
