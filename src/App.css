@@ -7,7 +7,7 @@
 
 /* 基础字体设置 */
 :root {
-  font-family: 'Source Han Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;

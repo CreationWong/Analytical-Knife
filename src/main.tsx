@@ -11,8 +11,8 @@ function Root() {
     const [settings] = useAppSettings();
 
     const theme = createTheme({
-        fontFamily: 'Source Han Mono, sans-serif',
-        fontFamilyMonospace: 'Source Han Mono, Monaco, Consolas, monospace',
+        fontFamily: 'sans-serif',
+        fontFamilyMonospace: 'Monaco, Consolas, monospace',
         primaryColor: settings?.primaryColor || 'blue',
     });
 

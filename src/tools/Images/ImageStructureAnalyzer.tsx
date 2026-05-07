@@ -11,10 +11,10 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { showNotification } from '@mantine/notifications';
-import { handleAppError } from '../../utils/error';
-import { useAppSettings } from '../../hooks/useAppSettings';
-import { useFilePreview } from '../../hooks/useFilePreview';
-import previewErrorImg from '../../assets/Error/400x200-PreviewError.svg';
+import { handleAppError } from '@/utils/error';
+import { useAppSettings } from '@/hooks/useAppSettings.ts';
+import { useFilePreview } from '@/hooks/useFilePreview.ts';
+import previewErrorImg from '@/assets/Error/400x200-PreviewError.svg';
 
 // --- 常量定义 ---
 const ALLOWED_PREVIEW_TYPES = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'svg'];
