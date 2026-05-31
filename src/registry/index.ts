@@ -18,7 +18,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         description: '软件信息与说明',
         icon: IconInfoCircle,
         path: null,
-        component: lazy(() => import('../components/./Home')),
+        component: lazy(() => import('../components/Home')),
         windowMaxWidth: 'none',
     },
 
@@ -28,7 +28,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         description: '配置界面',
         icon: IconSettings,
         path: '设置/界面设置',
-        component: lazy(() => import('../components/./UISettings')),
+        component: lazy(() => import('../components/UISettings')),
     },
 
     {
@@ -37,7 +37,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         description: '调试与重置功能',
         icon: IconBug,
         path: '设置/开发者设置',
-        component: lazy(() => import('../components/./DeveloperSettings')),
+        component: lazy(() => import('../components/DeveloperSettings')),
     },
 
     {
