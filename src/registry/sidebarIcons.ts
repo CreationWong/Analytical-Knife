@@ -1,6 +1,7 @@
 import {
     IconWorld, IconTerminal2, IconWand, IconCode, IconTrophy, IconTools, IconLockCode, IconKey,
     IconBug, IconSettings, IconJoker, IconLanguage, IconBulb, IconPhoto, IconPhotoQuestion, IconSearch, IconVideo,
+    IconWaveSine,
 } from '@tabler/icons-react';
 import React from "react";
 
@@ -29,4 +30,5 @@ export const PARENT_ICONS: Record<string, IconComponent> = {
     '辅助': IconTools,
     '分析': IconSearch,
     'Videos': IconVideo,
+    'Audios': IconWaveSine,
 };

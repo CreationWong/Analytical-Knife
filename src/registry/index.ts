@@ -163,7 +163,7 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         id: 'audioHeatmapAnalyzer',
         name: '声音热力图分析器',
         description: '本地音频频谱热力图分析',
-        path: 'Videos/音频分析/audioHeatmapAnalyzer',
+        path: 'Audios/audioHeatmapAnalyzer',
         icon: IconWaveSine,
         component: lazy(() => import('../tools/Media/AudioHeatmapAnalyzer')),
         windowMaxWidth: 'none'

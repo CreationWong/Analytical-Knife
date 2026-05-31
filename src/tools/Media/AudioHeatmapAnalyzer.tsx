@@ -200,7 +200,7 @@ export default function AudioHeatmapAnalyzer() {
 
     const [canvasWidth, setCanvasWidth] = useState(1024);
 
-    const scope = useMemo(() => buildScopeTheme(theme, isDark), [theme, isDark]);
+    const scope = useMemo(() => buildScopeTheme(theme, isDark), [theme]);
     const activeView = useMemo(() => resolveViewport(analysis, viewport), [analysis, viewport]);
     const timelineEnvelope = useMemo(() => (analysis ? buildTimelineEnvelope(analysis) : []), [analysis]);
     const heatmapSurface = useMemo(
@@ -631,7 +631,7 @@ export default function AudioHeatmapAnalyzer() {
                 note: '拖拽矩形聚焦局部频带',
             },
             {
-                label: '播放头',
+                label: '播放指针',
                 value: formatDuration(playbackTime, true),
                 note: isPlaying ? '播放中' : audioSource ? '可单击热力图定位' : '等待装载',
             },
@@ -992,7 +992,7 @@ export default function AudioHeatmapAnalyzer() {
                                                 </Badge>
                                             </Group>
                                             <Text size="sm" c={scope.textSecondary}>
-                                                主视图用于频谱浏览与框选放大，时间轴用于定位和拖拽窗口。
+                                                分析音频 热力图 信息
                                             </Text>
                                         </div>
                                     </Group>
@@ -1060,9 +1060,9 @@ export default function AudioHeatmapAnalyzer() {
                                                     <ThemeIcon size={60} radius="xl" variant="light" color={theme.primaryColor}>
                                                         <IconWaveSine size={30} />
                                                     </ThemeIcon>
-                                                    <Title order={4} c={scope.textPrimary}>热力图主画布</Title>
+                                                    <Title order={4} c={scope.textPrimary}>热力图</Title>
                                                     <Text size="sm" c={scope.textSecondary} ta="center">
-                                                        选择音频文件后生成频谱热力图。拖拽矩形放大，滚轮缩放，单击定位播放头。
+                                                        选择音频文件后生成频谱热力图。拖拽矩形放大，滚轮缩放，单击定位播放位置。
                                                     </Text>
                                                 </Stack>
                                             </Center>
@@ -1081,7 +1081,7 @@ export default function AudioHeatmapAnalyzer() {
                                             </Text>
                                             <Text size="xs" c={scope.textMuted}>
                                                 {analysis
-                                                    ? `播放头 ${formatDuration(playbackTime, true)} / ${formatDuration(playbackDuration)}`
+                                                    ? `播放位置: ${formatDuration(playbackTime, true)} / ${formatDuration(playbackDuration)}`
                                                     : '等待音频装载'}
                                             </Text>
                                         </div>
@@ -1140,7 +1140,7 @@ export default function AudioHeatmapAnalyzer() {
                                     </Paper>
 
                                     <Text size="xs" c={scope.textMuted}>
-                                        主画布拖拽矩形放大局部区域，单击可定位播放头；拖动时间轴高亮窗口平移时间段，双击主画布重置。
+                                        拖拽矩形放大局部区域，单击可定位播放位置；拖动时间轴高亮窗口平移时间段，双击重置。
                                     </Text>
                                 </Stack>
                             </Paper>
