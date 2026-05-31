@@ -14,6 +14,7 @@ use modules::encode_decode::vigenere::{crack_vigenere_auto, vigenere_cipher};
 use modules::images::image_structure_analyzer::{analyze_image_header, get_supported_templates};
 use modules::images::mirage_tank::generate_mirage_tank;
 use modules::images::wh_edit::{process_stego_edit};
+use modules::media::audio_heatmap::analyze_audio_heatmap;
 use modules::media::ffmpeg::{check_ffmpeg, run_ffmpeg_stream, stop_ffmpeg_native, FfmpegProcess};
 use modules::network::log_analyzer::{parse_log_content, read_and_parse_log};
 
@@ -82,6 +83,7 @@ pub fn run() {
             parse_log_content,
             read_and_parse_log,
             check_ffmpeg,
+            analyze_audio_heatmap,
             run_ffmpeg_stream,
             stop_ffmpeg_native,
             process_stego_edit

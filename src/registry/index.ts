@@ -8,7 +8,7 @@ import {
     IconKey,
     IconListCheck, IconLockAccess,
     IconLockCode, IconLockOpen, IconPhotoScan, IconReplace, IconSettings,
-    IconTerminal2, IconVideo
+    IconTerminal2, IconVideo, IconWaveSine
 } from "@tabler/icons-react";
 
 export const TOOLS_REGISTRY: ToolDefinition[] = [
@@ -156,6 +156,16 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         path: 'Videos/视频处理/ffmpegTool',
         icon: IconVideo,
         component: lazy(() => import('../tools/Media/FFmpegTool')),
+        windowMaxWidth: 'none'
+    },
+
+    {
+        id: 'audioHeatmapAnalyzer',
+        name: '声音热力图分析器',
+        description: '本地音频频谱热力图分析',
+        path: 'Videos/音频分析/audioHeatmapAnalyzer',
+        icon: IconWaveSine,
+        component: lazy(() => import('../tools/Media/AudioHeatmapAnalyzer')),
         windowMaxWidth: 'none'
     },
 
