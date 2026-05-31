@@ -1222,11 +1222,6 @@ export default function AudioHeatmapAnalyzer() {
                                         scope={scope}
                                     />
                                     <ScopeLine
-                                        label="定位方式"
-                                        value="单击热力图"
-                                        scope={scope}
-                                    />
-                                    <ScopeLine
                                         label="当前状态"
                                         value={isPlaying ? '播放中' : audioSource ? '已装载' : '未装载'}
                                         scope={scope}
