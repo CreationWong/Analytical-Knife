@@ -2,7 +2,6 @@ import {
     startTransition,
     type MouseEvent,
     type ReactNode,
-    type WheelEvent,
     useEffect,
     useMemo,
     useRef,
@@ -224,6 +223,22 @@ export default function AudioHeatmapAnalyzer() {
             scope
         );
     }, [analysis, activeView, canvasWidth, heatmapSurface, hoverInfo, timelineEnvelope, scope]);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !analysis || !activeView) {
+            return;
+        }
+
+        const handleCanvasWheel = (event: globalThis.WheelEvent) => {
+            handleHeatmapWheel(event, canvas);
+        };
+
+        canvas.addEventListener('wheel', handleCanvasWheel, { passive: false });
+        return () => {
+            canvas.removeEventListener('wheel', handleCanvasWheel);
+        };
+    }, [analysis, activeView, canvasWidth, chartHeight]);
 
     useEffect(() => {
         if (!timelineDragging || !analysis) {
@@ -461,13 +476,16 @@ export default function AudioHeatmapAnalyzer() {
         });
     };
 
-    const handleHeatmapWheel = (event: WheelEvent<HTMLCanvasElement>) => {
+    const handleHeatmapWheel = (event: globalThis.WheelEvent, currentTarget: HTMLCanvasElement) => {
         if (!analysis || !activeView) {
             return;
         }
 
+        event.preventDefault();
+        event.stopPropagation();
+
         const plotRect = getHeatmapPlotRect(canvasWidth, chartHeight);
-        const bounds = event.currentTarget.getBoundingClientRect();
+        const bounds = currentTarget.getBoundingClientRect();
         const scaleX = canvasWidth / bounds.width;
         const scaleY = plotRect.totalHeight / bounds.height;
         const x = (event.clientX - bounds.left) * scaleX;
@@ -481,8 +499,6 @@ export default function AudioHeatmapAnalyzer() {
         ) {
             return;
         }
-
-        event.preventDefault();
 
         if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
             const delta = event.shiftKey ? event.deltaY : event.deltaX;
@@ -618,7 +634,6 @@ export default function AudioHeatmapAnalyzer() {
                                                 ref={canvasRef}
                                                 onMouseMove={handlePointerMove}
                                                 onMouseLeave={() => setHoverInfo(null)}
-                                                onWheel={handleHeatmapWheel}
                                                 onDoubleClick={() => setViewport({ start: 0, size: analysis.width })}
                                                 style={{
                                                     width: '100%',
@@ -626,6 +641,8 @@ export default function AudioHeatmapAnalyzer() {
                                                     display: 'block',
                                                     borderRadius: '16px',
                                                     cursor: activeView && activeView.size < analysis.width ? 'crosshair' : 'default',
+                                                    touchAction: 'none',
+                                                    overscrollBehavior: 'contain',
                                                 }}
                                             />
                                         ) : (
