@@ -33,13 +33,16 @@ import { useMediaQuery, useViewportSize } from '@mantine/hooks';
 import {
     IconDownload,
     IconFileMusic,
+    IconPlayerPause,
+    IconPlayerPlay,
+    IconPlayerStop,
     IconRefresh,
     IconTrash,
     IconWaveSine,
 } from '@tabler/icons-react';
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { writeFile } from '@tauri-apps/plugin-fs';
+import { readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { showNotification } from '@/utils/notifications';
 
 type AnalyzerStatus = 'idle' | 'analyzing' | 'ready' | 'error';
@@ -73,6 +76,30 @@ interface HoverInfo {
 interface ViewWindow {
     start: number;
     size: number;
+    bandStart: number;
+    bandSize: number;
+}
+
+interface BrushSelection {
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+    startColumn: number;
+    currentColumn: number;
+    startBand: number;
+    currentBand: number;
+}
+
+interface HeatmapPoint {
+    x: number;
+    y: number;
+    column: number;
+    band: number;
+    timeSec: number;
+    frequencyHz: number;
+    intensity: number;
+    cursorRatio: number;
 }
 
 interface ScopeThemeTokens {
@@ -126,6 +153,17 @@ const RESOLUTION_MARKS = [
     { value: 640, label: '640' },
     { value: 960, label: '960' },
 ];
+const AUDIO_MIME_MAP: Record<string, string> = {
+    wav: 'audio/wav',
+    wave: 'audio/wav',
+    mp3: 'audio/mpeg',
+    ogg: 'audio/ogg',
+    m4a: 'audio/mp4',
+    aac: 'audio/aac',
+    flac: 'audio/flac',
+    opus: 'audio/ogg; codecs=opus',
+    wma: 'audio/x-ms-wma',
+};
 
 export default function AudioHeatmapAnalyzer() {
     const theme = useMantineTheme();
@@ -143,12 +181,22 @@ export default function AudioHeatmapAnalyzer() {
     const [analysis, setAnalysis] = useState<AudioHeatmapResult | null>(null);
     const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
     const [viewport, setViewport] = useState<ViewWindow | null>(null);
+    const [brushSelection, setBrushSelection] = useState<BrushSelection | null>(null);
+    const [heatmapDragging, setHeatmapDragging] = useState(false);
     const [timelineDragging, setTimelineDragging] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [playbackTime, setPlaybackTime] = useState(0);
+    const [audioDuration, setAudioDuration] = useState(0);
+    const [audioSource, setAudioSource] = useState('');
 
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const audioObjectUrlRef = useRef<string | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const timelineCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+    const heatmapDragRef = useRef<{ view: ViewWindow; selection: BrushSelection } | null>(null);
     const timelineDragRef = useRef<{ anchorRatio: number } | null>(null);
+    const playbackTimerRef = useRef<number | null>(null);
 
     const [canvasWidth, setCanvasWidth] = useState(1024);
 
@@ -162,6 +210,11 @@ export default function AudioHeatmapAnalyzer() {
     const chartHeight = useMemo(
         () => getChartHeight(canvasWidth, viewportHeight, isCompactLayout),
         [canvasWidth, viewportHeight, isCompactLayout]
+    );
+    const playbackDuration = analysis?.durationSec ?? audioDuration;
+    const playbackColumn = useMemo(
+        () => (analysis ? timeToColumn(playbackTime, analysis) : null),
+        [analysis, playbackTime]
     );
 
     useEffect(() => {
@@ -202,9 +255,11 @@ export default function AudioHeatmapAnalyzer() {
             canvasWidth,
             chartHeight,
             hoverInfo,
+            brushSelection,
+            playbackColumn,
             scope
         );
-    }, [analysis, activeView, canvasWidth, chartHeight, heatmapSurface, hoverInfo, scope]);
+    }, [analysis, activeView, brushSelection, canvasWidth, chartHeight, heatmapSurface, hoverInfo, playbackColumn, scope]);
 
     useEffect(() => {
         if (!analysis || !timelineCanvasRef.current || !heatmapSurface || !activeView) {
@@ -220,9 +275,10 @@ export default function AudioHeatmapAnalyzer() {
             canvasWidth,
             TIMELINE_HEIGHT,
             hoverInfo,
+            playbackColumn,
             scope
         );
-    }, [analysis, activeView, canvasWidth, heatmapSurface, hoverInfo, timelineEnvelope, scope]);
+    }, [analysis, activeView, canvasWidth, heatmapSurface, hoverInfo, playbackColumn, timelineEnvelope, scope]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -241,6 +297,266 @@ export default function AudioHeatmapAnalyzer() {
     }, [analysis, activeView, canvasWidth, chartHeight]);
 
     useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) {
+            return;
+        }
+
+        const syncTime = () => setPlaybackTime(audio.currentTime || 0);
+        const syncDuration = () => {
+            const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+            setAudioDuration(duration);
+        };
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => {
+            setIsPlaying(false);
+            syncTime();
+        };
+        const handleEnded = () => {
+            setIsPlaying(false);
+            syncTime();
+        };
+        const handleError = () => {
+            setIsPlaying(false);
+        };
+
+        audio.addEventListener('loadedmetadata', syncDuration);
+        audio.addEventListener('durationchange', syncDuration);
+        audio.addEventListener('timeupdate', syncTime);
+        audio.addEventListener('seeked', syncTime);
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+        audio.addEventListener('ended', handleEnded);
+        audio.addEventListener('error', handleError);
+
+        return () => {
+            audio.removeEventListener('loadedmetadata', syncDuration);
+            audio.removeEventListener('durationchange', syncDuration);
+            audio.removeEventListener('timeupdate', syncTime);
+            audio.removeEventListener('seeked', syncTime);
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+            audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('error', handleError);
+        };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const resetAudioElement = () => {
+            const audio = audioRef.current;
+            if (!audio) {
+                return;
+            }
+
+            audio.pause();
+            audio.currentTime = 0;
+            audio.removeAttribute('src');
+            audio.load();
+        };
+
+        const revokePreviousUrl = () => {
+            if (audioObjectUrlRef.current) {
+                URL.revokeObjectURL(audioObjectUrlRef.current);
+                audioObjectUrlRef.current = null;
+            }
+        };
+
+        revokePreviousUrl();
+        setAudioSource('');
+        setIsPlaying(false);
+        setPlaybackTime(0);
+        setAudioDuration(0);
+
+        if (!selectedPath) {
+            resetAudioElement();
+            return () => {
+                cancelled = true;
+            };
+        }
+
+        const loadAudioSource = async () => {
+            try {
+                const ext = selectedPath.split('.').pop()?.toLowerCase() || '';
+                const mimeType = AUDIO_MIME_MAP[ext] || 'application/octet-stream';
+                const bytes = await readFile(selectedPath);
+
+                if (cancelled) {
+                    return;
+                }
+
+                const objectUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+                audioObjectUrlRef.current = objectUrl;
+                setAudioSource(objectUrl);
+            } catch (error) {
+                console.error(error);
+                resetAudioElement();
+                showNotification({
+                    type: 'error',
+                    title: '音频装载失败',
+                    message: error instanceof Error ? error.message : '无法读取当前音频文件',
+                });
+            }
+        };
+
+        loadAudioSource();
+
+        return () => {
+            cancelled = true;
+            revokePreviousUrl();
+        };
+    }, [selectedPath]);
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) {
+            return;
+        }
+
+        audio.pause();
+        setIsPlaying(false);
+        setPlaybackTime(0);
+        setAudioDuration(0);
+
+        if (!audioSource) {
+            audio.removeAttribute('src');
+            audio.load();
+            return;
+        }
+
+        audio.currentTime = 0;
+        audio.load();
+    }, [audioSource]);
+
+    useEffect(() => {
+        if (playbackTimerRef.current !== null) {
+            window.clearInterval(playbackTimerRef.current);
+            playbackTimerRef.current = null;
+        }
+
+        if (!isPlaying) {
+            return;
+        }
+
+        playbackTimerRef.current = window.setInterval(() => {
+            const audio = audioRef.current;
+            if (audio) {
+                setPlaybackTime(audio.currentTime || 0);
+            }
+        }, 50);
+
+        return () => {
+            if (playbackTimerRef.current !== null) {
+                window.clearInterval(playbackTimerRef.current);
+                playbackTimerRef.current = null;
+            }
+        };
+    }, [isPlaying]);
+
+    useEffect(() => {
+        if (!heatmapDragging || !analysis) {
+            return;
+        }
+
+        const handleMouseMove = (event: globalThis.MouseEvent) => {
+            const canvas = canvasRef.current;
+            const dragMeta = heatmapDragRef.current;
+            if (!canvas || !dragMeta) {
+                return;
+            }
+
+            const point = readHeatmapPoint(
+                event.clientX,
+                event.clientY,
+                canvas,
+                canvasWidth,
+                chartHeight,
+                analysis,
+                dragMeta.view,
+                true
+            );
+
+            if (!point) {
+                return;
+            }
+
+            const nextSelection: BrushSelection = {
+                ...dragMeta.selection,
+                currentX: point.x,
+                currentY: point.y,
+                currentColumn: point.column,
+                currentBand: point.band,
+            };
+
+            heatmapDragRef.current = {
+                view: dragMeta.view,
+                selection: nextSelection,
+            };
+            setBrushSelection(nextSelection);
+            setHoverInfo({
+                column: point.column,
+                band: point.band,
+                timeSec: point.timeSec,
+                frequencyHz: point.frequencyHz,
+                intensity: point.intensity,
+            });
+        };
+
+        const handleMouseUp = (event: globalThis.MouseEvent) => {
+            const canvas = canvasRef.current;
+            const dragMeta = heatmapDragRef.current;
+            if (!canvas || !dragMeta) {
+                heatmapDragRef.current = null;
+                setBrushSelection(null);
+                setHeatmapDragging(false);
+                return;
+            }
+
+            const point = readHeatmapPoint(
+                event.clientX,
+                event.clientY,
+                canvas,
+                canvasWidth,
+                chartHeight,
+                analysis,
+                dragMeta.view,
+                true
+            );
+
+            const finalSelection = point ? {
+                ...dragMeta.selection,
+                currentX: point.x,
+                currentY: point.y,
+                currentColumn: point.column,
+                currentBand: point.band,
+            } : dragMeta.selection;
+
+            const dragDistance = Math.hypot(
+                finalSelection.currentX - finalSelection.startX,
+                finalSelection.currentY - finalSelection.startY
+            );
+
+            if (dragDistance < 6) {
+                handleSeekToTime(columnToTime(finalSelection.currentColumn, analysis));
+            } else {
+                setViewport(createViewFromSelection(finalSelection, analysis));
+            }
+
+            heatmapDragRef.current = null;
+            setBrushSelection(null);
+            setHeatmapDragging(false);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [analysis, canvasWidth, chartHeight, heatmapDragging]);
+
+    useEffect(() => {
         if (!timelineDragging || !analysis) {
             return;
         }
@@ -254,7 +570,7 @@ export default function AudioHeatmapAnalyzer() {
 
             const ratio = getHorizontalRatio(event.clientX, canvas);
             setViewport((current) => {
-                const next = resolveViewport(analysis, current) ?? { start: 0, size: analysis.width };
+                const next = resolveViewport(analysis, current) ?? createFullView(analysis);
                 return moveViewportToRatio(next, ratio, dragMeta.anchorRatio, analysis.width);
             });
         };
@@ -300,11 +616,24 @@ export default function AudioHeatmapAnalyzer() {
             return [];
         }
 
+        const visibleMinBand = activeView.bandStart;
+        const visibleMaxBand = activeView.bandStart + activeView.bandSize - 1;
+
         return [
             {
                 label: '可视窗口',
                 value: formatRange(activeView.start, activeView.start + activeView.size - 1, analysis),
-                note: `${activeView.size}/${analysis.width} 列`,
+                note: `${activeView.size}/${analysis.width} 列 · ${activeView.bandSize}/${analysis.height} 带`,
+            },
+            {
+                label: '可视频段',
+                value: `${formatFrequency(analysis.bandCenters[visibleMinBand])} ~ ${formatFrequency(analysis.bandCenters[visibleMaxBand])}`,
+                note: '拖拽矩形聚焦局部频带',
+            },
+            {
+                label: '播放头',
+                value: formatDuration(playbackTime, true),
+                note: isPlaying ? '播放中' : audioSource ? '可单击热力图定位' : '等待装载',
             },
             {
                 label: '光标',
@@ -312,17 +641,12 @@ export default function AudioHeatmapAnalyzer() {
                 note: hoverInfo ? formatFrequency(hoverInfo.frequencyHz) : '移动鼠标读取',
             },
             {
-                label: '时长',
-                value: formatDuration(analysis.durationSec),
-                note: `${analysis.sampleRate.toLocaleString()} Hz`,
-            },
-            {
                 label: '主导频率',
                 value: formatFrequency(analysis.dominantFrequency),
                 note: `峰值 ${formatPercent(analysis.peakAmplitude)}`,
             },
         ];
-    }, [analysis, activeView, hoverInfo]);
+    }, [analysis, activeView, audioSource, hoverInfo, isPlaying, playbackTime]);
 
     const handleSelectFile = async () => {
         const selected = await open({
@@ -340,6 +664,8 @@ export default function AudioHeatmapAnalyzer() {
         setAnalysis(null);
         setViewport(null);
         setHoverInfo(null);
+        setBrushSelection(null);
+        setHeatmapDragging(false);
     };
 
     const handleAnalyze = async (): Promise<void> => {
@@ -365,7 +691,7 @@ export default function AudioHeatmapAnalyzer() {
 
             startTransition(() => {
                 setAnalysis(result);
-                setViewport({ start: 0, size: result.width });
+                setViewport(createFullView(result));
             });
 
             setStatus('ready');
@@ -392,6 +718,17 @@ export default function AudioHeatmapAnalyzer() {
         setAnalysis(null);
         setViewport(null);
         setHoverInfo(null);
+        setBrushSelection(null);
+        setHeatmapDragging(false);
+        setIsPlaying(false);
+        setPlaybackTime(0);
+        setAudioDuration(0);
+
+        const audio = audioRef.current;
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
     };
 
     const handleExport = async (): Promise<void> => {
@@ -435,44 +772,31 @@ export default function AudioHeatmapAnalyzer() {
     };
 
     const handlePointerMove = (event: MouseEvent<HTMLCanvasElement>) => {
-        if (!analysis || !activeView) {
+        if (!analysis || !activeView || heatmapDragRef.current) {
             return;
         }
 
-        const plotRect = getHeatmapPlotRect(canvasWidth, chartHeight);
-        const bounds = event.currentTarget.getBoundingClientRect();
-        const scaleX = canvasWidth / bounds.width;
-        const scaleY = plotRect.totalHeight / bounds.height;
-        const x = (event.clientX - bounds.left) * scaleX;
-        const y = (event.clientY - bounds.top) * scaleY;
+        const point = readHeatmapPoint(
+            event.clientX,
+            event.clientY,
+            event.currentTarget,
+            canvasWidth,
+            chartHeight,
+            analysis,
+            activeView
+        );
 
-        if (
-            x < plotRect.x ||
-            x > plotRect.x + plotRect.width ||
-            y < plotRect.y ||
-            y > plotRect.y + plotRect.height
-        ) {
+        if (!point) {
             setHoverInfo(null);
             return;
         }
 
-        const localColumn = Math.min(
-            activeView.size - 1,
-            Math.max(0, Math.floor(((x - plotRect.x) / plotRect.width) * activeView.size))
-        );
-        const column = Math.min(analysis.width - 1, activeView.start + localColumn);
-        const topBand = Math.min(
-            analysis.height - 1,
-            Math.max(0, Math.floor(((y - plotRect.y) / plotRect.height) * analysis.height))
-        );
-        const band = analysis.height - 1 - topBand;
-
         setHoverInfo({
-            column,
-            band,
-            timeSec: columnToTime(column, analysis),
-            frequencyHz: analysis.bandCenters[band],
-            intensity: analysis.intensities[band * analysis.width + column],
+            column: point.column,
+            band: point.band,
+            timeSec: point.timeSec,
+            frequencyHz: point.frequencyHz,
+            intensity: point.intensity,
         });
     };
 
@@ -484,19 +808,17 @@ export default function AudioHeatmapAnalyzer() {
         event.preventDefault();
         event.stopPropagation();
 
-        const plotRect = getHeatmapPlotRect(canvasWidth, chartHeight);
-        const bounds = currentTarget.getBoundingClientRect();
-        const scaleX = canvasWidth / bounds.width;
-        const scaleY = plotRect.totalHeight / bounds.height;
-        const x = (event.clientX - bounds.left) * scaleX;
-        const y = (event.clientY - bounds.top) * scaleY;
+        const point = readHeatmapPoint(
+            event.clientX,
+            event.clientY,
+            currentTarget,
+            canvasWidth,
+            chartHeight,
+            analysis,
+            activeView
+        );
 
-        if (
-            x < plotRect.x ||
-            x > plotRect.x + plotRect.width ||
-            y < plotRect.y ||
-            y > plotRect.y + plotRect.height
-        ) {
+        if (!point) {
             return;
         }
 
@@ -509,11 +831,95 @@ export default function AudioHeatmapAnalyzer() {
             return;
         }
 
-        const cursorRatio = (x - plotRect.x) / plotRect.width;
         setViewport((current) => {
             const next = current ?? activeView;
-            return zoomViewport(next, event.deltaY, cursorRatio, analysis.width);
+            return zoomViewport(next, event.deltaY, point.cursorRatio, analysis.width);
         });
+    };
+
+    const handleHeatmapMouseDown = (event: MouseEvent<HTMLCanvasElement>) => {
+        if (!analysis || !activeView || event.button !== 0) {
+            return;
+        }
+
+        const point = readHeatmapPoint(
+            event.clientX,
+            event.clientY,
+            event.currentTarget,
+            canvasWidth,
+            chartHeight,
+            analysis,
+            activeView
+        );
+
+        if (!point) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const selection: BrushSelection = {
+            startX: point.x,
+            startY: point.y,
+            currentX: point.x,
+            currentY: point.y,
+            startColumn: point.column,
+            currentColumn: point.column,
+            startBand: point.band,
+            currentBand: point.band,
+        };
+
+        heatmapDragRef.current = {
+            view: activeView,
+            selection,
+        };
+        setBrushSelection(selection);
+        setHeatmapDragging(true);
+    };
+
+    const handleTogglePlayback = async () => {
+        const audio = audioRef.current;
+        if (!audio || !audioSource) {
+            return;
+        }
+
+        try {
+            if (audio.paused) {
+                await audio.play();
+            } else {
+                audio.pause();
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification({
+                type: 'error',
+                title: '播放失败',
+                message: error instanceof Error ? error.message : '当前音频无法播放',
+            });
+        }
+    };
+
+    const handleStopPlayback = () => {
+        const audio = audioRef.current;
+        if (!audio) {
+            return;
+        }
+
+        audio.pause();
+        audio.currentTime = 0;
+        setPlaybackTime(0);
+    };
+
+    const handleSeekToTime = (nextTime: number) => {
+        const audio = audioRef.current;
+        const duration = playbackDuration || audio?.duration || 0;
+        const clampedTime = clamp(nextTime, 0, duration || nextTime);
+
+        if (audio) {
+            audio.currentTime = clampedTime;
+        }
+
+        setPlaybackTime(clampedTime);
     };
 
     const handleTimelineMouseDown = (event: MouseEvent<HTMLCanvasElement>) => {
@@ -586,7 +992,7 @@ export default function AudioHeatmapAnalyzer() {
                                                 </Badge>
                                             </Group>
                                             <Text size="sm" c={scope.textSecondary}>
-                                                主视图用于频谱浏览，时间轴用于定位和拖拽窗口。
+                                                主视图用于频谱浏览与框选放大，时间轴用于定位和拖拽窗口。
                                             </Text>
                                         </div>
                                     </Group>
@@ -600,7 +1006,7 @@ export default function AudioHeatmapAnalyzer() {
                                     </Stack>
                                 </Group>
 
-                                <SimpleGrid cols={{ base: 1, xs: 2, xl: 4 }} spacing="md" mb="md">
+                                <SimpleGrid cols={{ base: 1, xs: 2, md: 3, xl: 5 }} spacing="md" mb="md">
                                     {signalCards.length > 0 ? signalCards.map((card) => (
                                         <ScopeReadout
                                             key={card.label}
@@ -612,8 +1018,9 @@ export default function AudioHeatmapAnalyzer() {
                                     )) : (
                                         <>
                                             <ScopeReadout label="可视窗口" value="--" note="等待分析" scope={scope} />
+                                            <ScopeReadout label="可视频段" value="--" note="等待分析" scope={scope} />
+                                            <ScopeReadout label="播放头" value="--" note="等待装载" scope={scope} />
                                             <ScopeReadout label="光标" value="--" note="移动鼠标读取" scope={scope} />
-                                            <ScopeReadout label="时长" value="--" note="等待分析" scope={scope} />
                                             <ScopeReadout label="主导频率" value="--" note="等待分析" scope={scope} />
                                         </>
                                     )}
@@ -632,17 +1039,19 @@ export default function AudioHeatmapAnalyzer() {
                                         {analysis ? (
                                             <canvas
                                                 ref={canvasRef}
+                                                onMouseDown={handleHeatmapMouseDown}
                                                 onMouseMove={handlePointerMove}
                                                 onMouseLeave={() => setHoverInfo(null)}
-                                                onDoubleClick={() => setViewport({ start: 0, size: analysis.width })}
+                                                onDoubleClick={() => setViewport(createFullView(analysis))}
                                                 style={{
                                                     width: '100%',
                                                     height: 'auto',
                                                     display: 'block',
                                                     borderRadius: '16px',
-                                                    cursor: activeView && activeView.size < analysis.width ? 'crosshair' : 'default',
+                                                    cursor: heatmapDragging ? 'crosshair' : 'cell',
                                                     touchAction: 'none',
                                                     overscrollBehavior: 'contain',
+                                                    userSelect: 'none',
                                                 }}
                                             />
                                         ) : (
@@ -653,7 +1062,7 @@ export default function AudioHeatmapAnalyzer() {
                                                     </ThemeIcon>
                                                     <Title order={4} c={scope.textPrimary}>热力图主画布</Title>
                                                     <Text size="sm" c={scope.textSecondary} ta="center">
-                                                        选择音频文件后生成频谱热力图。滚轮缩放，Shift + 滚轮平移。
+                                                        选择音频文件后生成频谱热力图。拖拽矩形放大，滚轮缩放，单击定位播放头。
                                                     </Text>
                                                 </Stack>
                                             </Center>
@@ -670,6 +1079,11 @@ export default function AudioHeatmapAnalyzer() {
                                                     ? formatRange(activeView.start, activeView.start + activeView.size - 1, analysis)
                                                     : '等待时间窗'}
                                             </Text>
+                                            <Text size="xs" c={scope.textMuted}>
+                                                {analysis
+                                                    ? `播放头 ${formatDuration(playbackTime, true)} / ${formatDuration(playbackDuration)}`
+                                                    : '等待音频装载'}
+                                            </Text>
                                         </div>
 
                                         <Group gap="xs">
@@ -677,7 +1091,7 @@ export default function AudioHeatmapAnalyzer() {
                                                 variant="light"
                                                 color={theme.primaryColor}
                                                 size={34}
-                                                onClick={() => analysis && setViewport({ start: 0, size: analysis.width })}
+                                                onClick={() => analysis && setViewport(createFullView(analysis))}
                                                 disabled={!analysis}
                                             >
                                                 <IconRefresh size={16} />
@@ -726,7 +1140,7 @@ export default function AudioHeatmapAnalyzer() {
                                     </Paper>
 
                                     <Text size="xs" c={scope.textMuted}>
-                                        拖动高亮窗口平移时间段，滚轮在主画布缩放，双击主画布重置。
+                                        主画布拖拽矩形放大局部区域，单击可定位播放头；拖动时间轴高亮窗口平移时间段，双击主画布重置。
                                     </Text>
                                 </Stack>
                             </Paper>
@@ -776,6 +1190,47 @@ export default function AudioHeatmapAnalyzer() {
                                             <IconTrash size={16} />
                                         </ActionIcon>
                                     </Group>
+                                </Stack>
+                            </InstrumentPanel>
+
+                            <InstrumentPanel title="播放控制" scope={scope}>
+                                <Stack gap="sm">
+                                    <Group grow>
+                                        <Button
+                                            color={theme.primaryColor}
+                                            variant={isPlaying ? 'light' : 'filled'}
+                                            leftSection={isPlaying ? <IconPlayerPause size={16} /> : <IconPlayerPlay size={16} />}
+                                            onClick={handleTogglePlayback}
+                                            disabled={!audioSource}
+                                        >
+                                            {isPlaying ? '暂停' : '播放'}
+                                        </Button>
+                                        <ActionIcon
+                                            size={36}
+                                            variant="light"
+                                            color={theme.primaryColor}
+                                            onClick={handleStopPlayback}
+                                            disabled={!audioSource}
+                                        >
+                                            <IconPlayerStop size={16} />
+                                        </ActionIcon>
+                                    </Group>
+
+                                    <ScopeLine
+                                        label="当前位置"
+                                        value={`${formatDuration(playbackTime)} / ${formatDuration(playbackDuration)}`}
+                                        scope={scope}
+                                    />
+                                    <ScopeLine
+                                        label="定位方式"
+                                        value="单击热力图"
+                                        scope={scope}
+                                    />
+                                    <ScopeLine
+                                        label="当前状态"
+                                        value={isPlaying ? '播放中' : audioSource ? '已装载' : '未装载'}
+                                        scope={scope}
+                                    />
                                 </Stack>
                             </InstrumentPanel>
 
@@ -859,9 +1314,14 @@ export default function AudioHeatmapAnalyzer() {
                                     <Divider color={scope.grid} />
                                     <ScopeLine
                                         label="频段覆盖"
-                                        value={analysis
-                                            ? `${formatFrequency(analysis.bandCenters[0])} ~ ${formatFrequency(analysis.bandCenters[analysis.bandCenters.length - 1])}`
+                                        value={analysis && activeView
+                                            ? `${formatFrequency(analysis.bandCenters[activeView.bandStart])} ~ ${formatFrequency(analysis.bandCenters[activeView.bandStart + activeView.bandSize - 1])}`
                                             : '--'}
+                                        scope={scope}
+                                    />
+                                    <ScopeLine
+                                        label="总时长"
+                                        value={analysis ? formatDuration(analysis.durationSec) : '--'}
                                         scope={scope}
                                     />
                                     <ScopeLine
@@ -880,6 +1340,7 @@ export default function AudioHeatmapAnalyzer() {
                     </Grid.Col>
                 </Grid>
             </Paper>
+            <audio ref={audioRef} src={audioSource || undefined} preload="metadata" style={{ display: 'none' }} />
         </Stack>
     );
 }
@@ -986,6 +1447,8 @@ function drawHeatmap(
     totalWidth: number,
     totalHeight: number,
     hoverInfo: HoverInfo | null,
+    brushSelection: BrushSelection | null,
+    playbackColumn: number | null,
     scope: ScopeThemeTokens
 ) {
     const ratio = window.devicePixelRatio || 1;
@@ -1017,9 +1480,9 @@ function drawHeatmap(
     context.drawImage(
         surface,
         view.start,
-        0,
+        analysis.height - view.bandStart - view.bandSize,
         Math.max(1, view.size),
-        analysis.height,
+        Math.max(1, view.bandSize),
         plotRect.x,
         plotRect.y,
         plotRect.width,
@@ -1033,10 +1496,47 @@ function drawHeatmap(
     context.lineWidth = 1;
     context.strokeRect(plotRect.x, plotRect.y, plotRect.width, plotRect.height);
 
-    if (hoverInfo) {
+    if (playbackColumn !== null && playbackColumn >= view.start && playbackColumn < view.start + view.size) {
+        const relativeColumn = playbackColumn - view.start;
+        const lineX = plotRect.x + (relativeColumn / Math.max(view.size - 1, 1)) * plotRect.width;
+
+        context.strokeStyle = scope.accent;
+        context.lineWidth = 2;
+        context.shadowBlur = 14;
+        context.shadowColor = scope.accentGlow;
+        context.beginPath();
+        context.moveTo(lineX, plotRect.y);
+        context.lineTo(lineX, plotRect.y + plotRect.height);
+        context.stroke();
+        context.shadowBlur = 0;
+    }
+
+    if (brushSelection) {
+        const brushLeft = Math.min(brushSelection.startX, brushSelection.currentX);
+        const brushTop = Math.min(brushSelection.startY, brushSelection.currentY);
+        const brushWidth = Math.abs(brushSelection.currentX - brushSelection.startX);
+        const brushHeight = Math.abs(brushSelection.currentY - brushSelection.startY);
+
+        context.fillStyle = rgba(scope.accent, 0.16);
+        context.fillRect(brushLeft, brushTop, brushWidth, brushHeight);
+        context.strokeStyle = rgba(scope.accent, 0.94);
+        context.lineWidth = 1.4;
+        context.setLineDash([6, 4]);
+        context.strokeRect(brushLeft, brushTop, brushWidth, brushHeight);
+        context.setLineDash([]);
+    }
+
+    if (
+        hoverInfo &&
+        hoverInfo.column >= view.start &&
+        hoverInfo.column < view.start + view.size &&
+        hoverInfo.band >= view.bandStart &&
+        hoverInfo.band < view.bandStart + view.bandSize
+    ) {
         const relativeColumn = hoverInfo.column - view.start;
         const columnRatio = view.size <= 1 ? 0 : relativeColumn / (view.size - 1);
-        const bandRatio = analysis.height <= 1 ? 0 : hoverInfo.band / (analysis.height - 1);
+        const relativeBand = hoverInfo.band - view.bandStart;
+        const bandRatio = view.bandSize <= 1 ? 0 : relativeBand / (view.bandSize - 1);
         const crossX = plotRect.x + columnRatio * plotRect.width;
         const crossY = plotRect.y + plotRect.height - bandRatio * plotRect.height;
 
@@ -1066,6 +1566,7 @@ function drawTimeline(
     totalWidth: number,
     totalHeight: number,
     hoverInfo: HoverInfo | null,
+    playbackColumn: number | null,
     scope: ScopeThemeTokens
 ) {
     const ratio = window.devicePixelRatio || 1;
@@ -1166,6 +1667,19 @@ function drawTimeline(
         context.stroke();
         context.setLineDash([]);
     }
+
+    if (playbackColumn !== null) {
+        const playheadX = plotRect.x + (playbackColumn / Math.max(analysis.width - 1, 1)) * plotRect.width;
+        context.strokeStyle = scope.accent;
+        context.lineWidth = 2;
+        context.shadowBlur = 12;
+        context.shadowColor = scope.accentGlow;
+        context.beginPath();
+        context.moveTo(playheadX, plotRect.y);
+        context.lineTo(playheadX, plotRect.y + plotRect.height);
+        context.stroke();
+        context.shadowBlur = 0;
+    }
 }
 
 function drawScopeGrid(
@@ -1217,8 +1731,8 @@ function drawHeatmapAxes(
         context.fillText(label, offsetX, plotRect.y + plotRect.height + 24);
     });
 
-    const minFrequency = analysis.bandCenters[0];
-    const maxFrequency = analysis.bandCenters[analysis.bandCenters.length - 1];
+    const minFrequency = analysis.bandCenters[view.bandStart];
+    const maxFrequency = analysis.bandCenters[view.bandStart + view.bandSize - 1];
     const frequencyTicks = [60, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
         .filter((value) => value >= minFrequency && value <= maxFrequency);
 
@@ -1332,19 +1846,122 @@ function getChartHeight(canvasWidth: number, viewportHeight: number, isCompactLa
     return clamp(desired, minHeight, maxByWindow);
 }
 
+function createFullView(analysis: AudioHeatmapResult): ViewWindow {
+    return {
+        start: 0,
+        size: analysis.width,
+        bandStart: 0,
+        bandSize: analysis.height,
+    };
+}
+
+function createViewFromSelection(selection: BrushSelection, analysis: AudioHeatmapResult): ViewWindow {
+    const columnWindow = buildWindowFromRange(
+        selection.startColumn,
+        selection.currentColumn,
+        analysis.width,
+        Math.min(analysis.width, 24)
+    );
+    const bandWindow = buildWindowFromRange(
+        selection.startBand,
+        selection.currentBand,
+        analysis.height,
+        Math.min(analysis.height, 8)
+    );
+
+    return {
+        start: columnWindow.start,
+        size: columnWindow.size,
+        bandStart: bandWindow.start,
+        bandSize: bandWindow.size,
+    };
+}
+
+function buildWindowFromRange(first: number, second: number, total: number, minSize: number) {
+    const start = Math.min(first, second);
+    const end = Math.max(first, second);
+    const center = (start + end) / 2;
+    const size = clamp(end - start + 1, minSize, total);
+    const windowStart = clamp(Math.round(center - size / 2), 0, Math.max(0, total - size));
+
+    return {
+        start: windowStart,
+        size,
+    };
+}
+
+function readHeatmapPoint(
+    clientX: number,
+    clientY: number,
+    canvas: HTMLCanvasElement,
+    totalWidth: number,
+    totalHeight: number,
+    analysis: AudioHeatmapResult,
+    view: ViewWindow,
+    clampToPlot = false
+): HeatmapPoint | null {
+    const plotRect = getHeatmapPlotRect(totalWidth, totalHeight);
+    const bounds = canvas.getBoundingClientRect();
+    const scaleX = totalWidth / Math.max(bounds.width, 1);
+    const scaleY = plotRect.totalHeight / Math.max(bounds.height, 1);
+    const rawX = (clientX - bounds.left) * scaleX;
+    const rawY = (clientY - bounds.top) * scaleY;
+
+    const x = clampToPlot ? clamp(rawX, plotRect.x, plotRect.x + plotRect.width) : rawX;
+    const y = clampToPlot ? clamp(rawY, plotRect.y, plotRect.y + plotRect.height) : rawY;
+
+    if (
+        x < plotRect.x ||
+        x > plotRect.x + plotRect.width ||
+        y < plotRect.y ||
+        y > plotRect.y + plotRect.height
+    ) {
+        return null;
+    }
+
+    const localColumn = Math.min(
+        view.size - 1,
+        Math.max(0, Math.floor(((x - plotRect.x) / plotRect.width) * view.size))
+    );
+    const column = Math.min(analysis.width - 1, view.start + localColumn);
+
+    const topBand = Math.min(
+        view.bandSize - 1,
+        Math.max(0, Math.floor(((y - plotRect.y) / plotRect.height) * view.bandSize))
+    );
+    const band = clamp(
+        view.bandStart + view.bandSize - 1 - topBand,
+        view.bandStart,
+        view.bandStart + view.bandSize - 1
+    );
+
+    return {
+        x,
+        y,
+        column,
+        band,
+        timeSec: columnToTime(column, analysis),
+        frequencyHz: analysis.bandCenters[band],
+        intensity: analysis.intensities[band * analysis.width + column] ?? 0,
+        cursorRatio: (x - plotRect.x) / Math.max(plotRect.width, 1),
+    };
+}
+
 function resolveViewport(analysis: AudioHeatmapResult | null, viewport: ViewWindow | null): ViewWindow | null {
     if (!analysis) {
         return null;
     }
 
-    const fallback = { start: 0, size: analysis.width };
+    const fallback = createFullView(analysis);
     if (!viewport) {
         return fallback;
     }
 
     const size = clamp(Math.round(viewport.size), Math.min(analysis.width, 24), analysis.width);
     const start = clamp(Math.round(viewport.start), 0, Math.max(0, analysis.width - size));
-    return { start, size };
+    const bandSize = clamp(Math.round(viewport.bandSize), Math.min(analysis.height, 8), analysis.height);
+    const bandStart = clamp(Math.round(viewport.bandStart), 0, Math.max(0, analysis.height - bandSize));
+    return { start, size, bandStart, bandSize };
 }
 
 function zoomViewport(current: ViewWindow, deltaY: number, cursorRatio: number, totalColumns: number): ViewWindow {
@@ -1363,18 +1980,18 @@ function zoomViewport(current: ViewWindow, deltaY: number, cursorRatio: number, 
         Math.max(0, totalColumns - nextSize)
     );
 
-    return { start: nextStart, size: nextSize };
+    return { ...current, start: nextStart, size: nextSize };
 }
 
 function panViewport(current: ViewWindow, delta: number, totalColumns: number): ViewWindow {
     if (current.size >= totalColumns) {
-        return { start: 0, size: totalColumns };
+        return { ...current, start: 0, size: totalColumns };
     }
 
     const step = Math.max(1, Math.round(current.size / 20));
     const offset = Math.round((delta / 72) * step);
     const nextStart = clamp(current.start + offset, 0, Math.max(0, totalColumns - current.size));
-    return { start: nextStart, size: current.size };
+    return { ...current, start: nextStart, size: current.size };
 }
 
 function moveViewportToRatio(current: ViewWindow, ratio: number, anchorRatio: number, totalColumns: number): ViewWindow {
@@ -1385,7 +2002,7 @@ function moveViewportToRatio(current: ViewWindow, ratio: number, anchorRatio: nu
         Math.max(0, totalColumns - current.size)
     );
 
-    return { start: nextStart, size: current.size };
+    return { ...current, start: nextStart, size: current.size };
 }
 
 function getHorizontalRatio(clientX: number, canvas: HTMLCanvasElement): number {
@@ -1484,6 +2101,15 @@ function getFrequencyRatio(frequency: number, minFrequency: number, maxFrequency
         (Math.log(clamped) - Math.log(minFrequency)) /
         (Math.log(maxFrequency) - Math.log(minFrequency))
     );
+}
+
+function timeToColumn(timeSec: number, analysis: AudioHeatmapResult): number {
+    if (analysis.width <= 1 || analysis.durationSec <= 0) {
+        return 0;
+    }
+
+    const normalized = clamp(timeSec / analysis.durationSec, 0, 1);
+    return Math.round(normalized * (analysis.width - 1));
 }
 
 function columnToTime(column: number, analysis: AudioHeatmapResult): number {
