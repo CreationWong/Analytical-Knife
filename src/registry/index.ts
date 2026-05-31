@@ -8,7 +8,7 @@ import {
     IconKey,
     IconListCheck, IconLockAccess,
     IconLockCode, IconLockOpen, IconPhotoScan, IconReplace, IconSettings,
-    IconTerminal2, IconVideo, IconWaveSine
+    IconTerminal2, IconTools, IconVideo, IconWaveSine
 } from "@tabler/icons-react";
 
 export const TOOLS_REGISTRY: ToolDefinition[] = [
@@ -29,6 +29,16 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconSettings,
         path: '设置/UISettings',
         component: lazy(() => import('../components/./UISettings')),
+    },
+
+    {
+        id: 'pluginManager',
+        name: '插件管理',
+        description: '导入 HTML 插件',
+        icon: IconTools,
+        path: '设置/插件管理',
+        component: lazy(() => import('../tools/Plugins/PluginManager')),
+        windowMaxWidth: 'none',
     },
 
     {

@@ -21,13 +21,18 @@ import {
 } from '@tabler/icons-react';
 import { TOOLS_REGISTRY } from './registry';
 import { ToolErrorBoundary } from './components/ErrorBoundary';
-import { PARENT_ICONS } from './registry/sidebarIcons.ts';
+import HtmlPluginHost from './components/HtmlPluginHost';
+import { useCustomPlugins } from './hooks/useCustomPlugins';
+import { PARENT_ICONS, resolvePluginIcon } from './registry/sidebarIcons.ts';
+import { ToolDefinition } from './registry/types';
+import { isPluginTool, toPluginToolDefinition } from './utils/customPlugins';
 
 // 树节点接口定义
 interface TreeNode {
     label: string;
     children: Record<string, TreeNode>;
     toolId?: string;
+    sortOrder: number;
 }
 
 // 本地存储的 Key
@@ -37,6 +42,7 @@ export default function App() {
     // 状态管理
     const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
     const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
+    const { plugins: customPlugins, loading: customPluginsLoading } = useCustomPlugins();
 
     useEffect(() => {
         // 生产环境禁用右键菜单
@@ -48,11 +54,19 @@ export default function App() {
         }
     }, []);
 
+    const runtimeTools = useMemo<ToolDefinition[]>(
+        () => [
+            ...TOOLS_REGISTRY,
+            ...customPlugins
+                .filter(plugin => plugin.enabled)
+                .map(toPluginToolDefinition),
+        ],
+        [customPlugins]
+    );
+
     // 初始化 activeId：优先从本地存储读取，若无则默认为 'about'
     const [activeId, setActiveId] = useState<string>(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        // 验证保存的 ID 是否依然存在于注册表中，防止插件删除后导致死循环
-        return TOOLS_REGISTRY.some(t => t.id === saved) ? (saved as string) : 'about';
+        return localStorage.getItem(STORAGE_KEY) || 'about';
     });
 
     // 处理工具切换并持久化
@@ -61,45 +75,78 @@ export default function App() {
         localStorage.setItem(STORAGE_KEY, id);
     };
 
+    useEffect(() => {
+        if (runtimeTools.some(tool => tool.id === activeId)) return;
+
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        if (saved && runtimeTools.some(tool => tool.id === saved)) {
+            setActiveId(saved);
+            return;
+        }
+
+        setActiveId('about');
+        localStorage.setItem(STORAGE_KEY, 'about');
+    }, [activeId, runtimeTools]);
+
     // 构建工具树逻辑 (基于 path 字段)
     const toolTree = useMemo(() => {
         const root: Record<string, TreeNode> = {};
 
-        TOOLS_REGISTRY.forEach((tool) => {
+        runtimeTools.forEach((tool, index) => {
             // 如果 path 为空，直接跳过，不加入侧边栏树结构
             if (!tool.path) return;
 
             const parts = tool.path.split('/');
             let currentLevel = root;
+            const sortOrder = tool.sidebarOrder ?? index;
 
             parts.forEach((part, index) => {
                 if (!currentLevel[part]) {
-                    currentLevel[part] = { label: part, children: {} };
+                    currentLevel[part] = {
+                        label: part,
+                        children: {},
+                        sortOrder,
+                    };
                 }
+
+                currentLevel[part].sortOrder = Math.min(currentLevel[part].sortOrder, sortOrder);
 
                 if (index === parts.length - 1) {
                     currentLevel[part].toolId = tool.id;
                     currentLevel[part].label = tool.name;
+                    currentLevel[part].sortOrder = sortOrder;
                 }
 
                 currentLevel = currentLevel[part].children;
             });
         });
         return root;
-    }, []);
+    }, [runtimeTools]);
 
     // 递归渲染侧边栏菜单
     const renderNavNodes = (nodes: Record<string, TreeNode>, inheritedIcon?: any) => {
-        return Object.entries(nodes).map(([key, node]) => {
+        return Object.entries(nodes)
+            .sort(([, a], [, b]) => {
+                if (a.sortOrder !== b.sortOrder) {
+                    return a.sortOrder - b.sortOrder;
+                }
+
+                return a.label.localeCompare(b.label, 'zh-CN');
+            })
+            .map(([key, node]) => {
             const isLeaf = !!node.toolId;
-            const tool = isLeaf ? TOOLS_REGISTRY.find(t => t.id === node.toolId) : null;
+            const tool = isLeaf ? runtimeTools.find(t => t.id === node.toolId) : null;
             const hasChildren = Object.keys(node.children).length > 0;
 
             let CurrentIcon;
 
             if (isLeaf) {
                 // 叶子节点（工具）：注册表定义 > 继承的父节点图标 > 默认图标
-                CurrentIcon = tool?.icon || inheritedIcon || IconLayoutDashboard;
+                CurrentIcon = tool?.icon
+                    || (tool?.source === 'plugin' ? resolvePluginIcon(tool.iconKey) : undefined)
+                    || inheritedIcon
+                    || IconLayoutDashboard;
             } else {
                 // 父节点（目录）：sidebarIcons 定义 > 继承的父节点图标 > 默认图标
                 CurrentIcon = PARENT_ICONS[key] || inheritedIcon || IconLayoutDashboard;
@@ -148,12 +195,14 @@ export default function App() {
         });
     };
 
-    const activeTool = TOOLS_REGISTRY.find((t) => t.id === activeId);
+    const activeTool = runtimeTools.find((t) => t.id === activeId);
+    const isActivePluginTool = isPluginTool(activeTool);
 
     // 确定当前容器的最大宽度逻辑：
     // 1. 如果工具明确定义了 maxWidth，则使用该值
     // 2. 如果没定义，默认使用 1200
     const currentMaxWidth = activeTool?.windowMaxWidth !== undefined ? activeTool.windowMaxWidth : 1200;
+    const shouldFillWindow = isActivePluginTool;
 
     return (
         <AppShell
@@ -163,7 +212,7 @@ export default function App() {
                 breakpoint: 'sm',
                 collapsed: { mobile: !mobileOpened },
             }}
-            padding="md"
+            padding={shouldFillWindow ? 0 : 'md'}
             transitionDuration={300}
             transitionTimingFunction="ease"
         >
@@ -230,7 +279,8 @@ export default function App() {
                 style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    minHeight: '100vh' // 确保背景色撑满全屏
+                    minHeight: 0,
+                    height: '100vh'
                 }}
             >
                 <ToolErrorBoundary key={activeId}>
@@ -241,25 +291,35 @@ export default function App() {
                     }>
                         <Box
                             style={{
-                                // 如果是全屏模式，去掉内边距并撑满
-                                padding: currentMaxWidth === 'none' ? 0 : 'var(--mantine-spacing-md)',
+                                padding: shouldFillWindow || currentMaxWidth === 'none' ? 0 : 'var(--mantine-spacing-md)',
                                 // 动态最大宽度
-                                maxWidth: currentMaxWidth === 'none' ? '100%' : `${currentMaxWidth}px`,
+                                maxWidth: shouldFillWindow || currentMaxWidth === 'none' ? '100%' : `${currentMaxWidth}px`,
                                 width: '100%',
                                 marginLeft: 'auto',
                                 marginRight: 'auto',
-                                flex: 1, // 让内容区域自动撑开
+                                flex: 1,
+                                minHeight: 0,
                                 display: 'flex',
                                 flexDirection: 'column'
                             }}
                         >
                             {activeTool ? (
-                                <activeTool.component />
+                                isPluginTool(activeTool) ? (
+                                    <HtmlPluginHost tool={activeTool} />
+                                ) : activeTool.component ? (
+                                    <activeTool.component />
+                                ) : null
                             ) : (
-                                <Stack align="center" mt={100} gap="sm">
-                                    <IconInfoCircle size={48} color="var(--mantine-color-gray-4)" />
-                                    <Text c="dimmed" fw={500}>未找到该工具，请在侧边栏重新选择</Text>
-                                </Stack>
+                                customPluginsLoading ? (
+                                    <Group justify="center" mt="xl">
+                                        <Loader size="lg" variant="dots" />
+                                    </Group>
+                                ) : (
+                                    <Stack align="center" mt={100} gap="sm">
+                                        <IconInfoCircle size={48} color="var(--mantine-color-gray-4)" />
+                                        <Text c="dimmed" fw={500}>未找到该工具，请在侧边栏重新选择</Text>
+                                    </Stack>
+                                )
                             )}
                         </Box>
                     </Suspense>
