@@ -3,6 +3,7 @@
 mod modules; // 声明 modules 目录为一个模块
 
 use std::sync::Arc;
+use tauri::Manager;
 
 // 导入模块
 use modules::crypto::big_rsa::solve_multi_layer_rsa;
@@ -17,6 +18,12 @@ use modules::images::wh_edit::{process_stego_edit};
 use modules::media::audio_heatmap::analyze_audio_heatmap;
 use modules::media::ffmpeg::{check_ffmpeg, run_ffmpeg_stream, stop_ffmpeg_native, FfmpegProcess};
 use modules::network::log_analyzer::{parse_log_content, read_and_parse_log};
+use modules::plugins::registry::{
+    generate_plugins_xml, get_plugin_environment, handle_plugin_uri_request,
+    import_compiled_html_plugin, list_custom_plugins, load_plugin_entry_html,
+    remove_custom_plugin, reset_third_party_tools, update_custom_plugin_metadata,
+    PLUGIN_URI_SCHEME,
+};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -58,9 +65,23 @@ fn common_modulus_attack(
     }
 }
 
+#[tauri::command]
+fn open_main_devtools(app: tauri::AppHandle) -> Result<(), String> {
+    let webview = app
+        .get_webview_window("main")
+        .ok_or_else(|| "未找到主窗口".to_string())?;
+
+    webview.open_devtools();
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .register_uri_scheme_protocol(PLUGIN_URI_SCHEME, |_ctx, request| {
+            handle_plugin_uri_request(request)
+        })
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -86,7 +107,16 @@ pub fn run() {
             analyze_audio_heatmap,
             run_ffmpeg_stream,
             stop_ffmpeg_native,
-            process_stego_edit
+            process_stego_edit,
+            get_plugin_environment,
+            list_custom_plugins,
+            import_compiled_html_plugin,
+            update_custom_plugin_metadata,
+            remove_custom_plugin,
+            generate_plugins_xml,
+            reset_third_party_tools,
+            load_plugin_entry_html,
+            open_main_devtools
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
