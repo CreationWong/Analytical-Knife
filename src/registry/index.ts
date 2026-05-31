@@ -27,8 +27,17 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         name: '界面设置',
         description: '配置界面',
         icon: IconSettings,
-        path: '设置/UISettings',
+        path: '设置/界面设置',
         component: lazy(() => import('../components/./UISettings')),
+    },
+
+    {
+        id: 'developerSettings',
+        name: '开发者设置',
+        description: '调试与重置功能',
+        icon: IconBug,
+        path: '设置/开发者设置',
+        component: lazy(() => import('../components/./DeveloperSettings')),
     },
 
     {
