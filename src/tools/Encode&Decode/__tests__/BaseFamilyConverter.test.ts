@@ -8,10 +8,57 @@ const ALPHABETS = {
     base58: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz',
     base62: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
     base64: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
+    baseXX: '+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
 } as const;
 
 function toBytes(s: string): Uint8Array { return new TextEncoder().encode(s); }
 function fromBytes(b: Uint8Array): string { return new TextDecoder().decode(b); }
+
+// XXencode
+function baseXXEncode(bytes: Uint8Array): string {
+    const alpha = ALPHABETS.baseXX;
+    let result = '';
+    for (let i = 0; i < bytes.length; i += 3) {
+        const b = [bytes[i] ?? 0, bytes[i + 1] ?? 0, bytes[i + 2] ?? 0];
+        const remaining = bytes.length - i;
+        const b0 = b[0]!, b1 = b[1]!, b2 = b[2]!;
+
+        let group = '';
+        group += alpha[b0 >> 2];
+        group += alpha[((b0 & 0x03) << 4) | (b1 >> 4)];
+        group += alpha[((b1 & 0x0F) << 2) | (b2 >> 6)];
+        group += alpha[b2 & 0x3F];
+
+        if (remaining < 3) {
+            const keep = remaining === 1 ? 2 : 3;
+            group = group.slice(0, keep) + '='.repeat(4 - keep);
+        }
+        result += group;
+    }
+    return result;
+}
+
+function baseXXDecode(s: string): Uint8Array | null {
+    const alpha = ALPHABETS.baseXX;
+    const clean = s.replace(/\s/g, '');
+    if (!clean) return new Uint8Array(0);
+    if (!/^[+\-0-9A-Za-z=]*$/.test(clean) || clean.length % 4 !== 0) return null;
+
+    const bytes: number[] = [];
+    for (let i = 0; i < clean.length; i += 4) {
+        const chunk = clean.slice(i, i + 4);
+        const pad = (chunk.match(/=/g) || []).length;
+        if (pad === 4) break;
+
+        const vals = [...chunk].map(c => c === '=' ? 0 : alpha.indexOf(c));
+        if (vals.some(v => v === -1)) return null;
+
+        bytes.push((vals[0] << 2) | (vals[1] >> 4));
+        if (pad < 2) bytes.push((vals[1] << 4) | (vals[2] >> 2));
+        if (pad < 1) bytes.push((vals[2] << 6) | vals[3]);
+    }
+    return Uint8Array.from(bytes);
+}
 
 // Base16
 function base16Encode(bytes: Uint8Array): string {
@@ -164,6 +211,7 @@ describe.each([
     ['Base58', base58Encode, base58Decode],
     ['Base62', base62Encode, base62Decode],
     ['Base64', base64Encode, base64Decode],
+    ['XXencode', baseXXEncode, baseXXDecode],
 ] as const)('%s', (_name, encode, decode) => {
 
     it('空输入应正确处理', () => {
@@ -283,6 +331,33 @@ describe('Base64 特定测试', () => {
     });
 });
 
+describe('XXencode 特定测试', () => {
+    it('编码 HELLO 应正确往返', () => {
+        const enc = baseXXEncode(toBytes('HELLO'));
+        expect(enc.length % 4).toBe(0);
+        const dec = baseXXDecode(enc);
+        expect(dec).not.toBeNull();
+        expect(fromBytes(dec!)).toBe('HELLO');
+    });
+
+    it('单字节填充正确', () => {
+        const enc = baseXXEncode(toBytes('H'));
+        expect(enc).toMatch(/=$/);
+        const dec = baseXXDecode(enc);
+        expect(dec).not.toBeNull();
+        expect(fromBytes(dec!)).toBe('H');
+    });
+
+    it('不同长度往返一致', () => {
+        for (const t of ['a', 'ab', 'abc', 'abcd', 'Hello World!', '中文测试🚀']) {
+            const enc = baseXXEncode(toBytes(t));
+            const dec = baseXXDecode(enc);
+            expect(dec).not.toBeNull();
+            expect(fromBytes(dec!)).toBe(t);
+        }
+    });
+});
+
 describe('Base32 解码填充容错', () => {
     it('不同填充长度的解码应正确', () => {
         const original = 'Hello World!';
@@ -325,7 +400,7 @@ describe('二进制数据各 Base 的膨胀率', () => {
 const BASE_INFO: Record<string, { label: string }> = {
     base16: { label: 'Base16' }, base32: { label: 'Base32' },
     base58: { label: 'Base58' }, base62: { label: 'Base62' },
-    base64: { label: 'Base64' },
+    base64: { label: 'Base64' }, baseXX: { label: 'XXencode' },
 };
 
 const ENCODERS: Record<string, { encode: Function; decode: Function }> = {
@@ -334,6 +409,7 @@ const ENCODERS: Record<string, { encode: Function; decode: Function }> = {
     base58: { encode: base58Encode, decode: base58Decode },
     base62: { encode: base62Encode, decode: base62Decode },
     base64: { encode: base64Encode, decode: base64Decode },
+    baseXX: { encode: baseXXEncode, decode: baseXXDecode },
 };
 
 function autoDetect(input: string): Array<{ variant: string; label: string; data: string; score: number; reason: string }> {
@@ -390,6 +466,13 @@ function autoDetect(input: string): Array<{ variant: string; label: string; data
                 score = (hasPadding ? 40 : 20) + (goodLength ? 15 : 0) + textRatio * 30;
                 reason = `Base64${hasPadding ? ' 含填充' : ''}${goodLength ? ' 对齐' : ''}，可读率 ${(textRatio * 100).toFixed(0)}%`;
             }
+        } else if (variant === 'baseXX') {
+            if (/^[+\-0-9A-Za-z=\s]+$/.test(clean)) {
+                const hasDash = clean.includes('-');
+                const hasPlus = clean.includes('+');
+                score = (hasDash || hasPlus ? 35 : 15) + textRatio * 35;
+                reason = `XXencode 字符集${hasDash ? ' 含-' : ''}，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
         }
 
         if (data.trim() === input.trim()) {
@@ -428,6 +511,15 @@ describe('autoDetect - 自动检测', () => {
         const base32Result = results.find(r => r.variant === 'base32');
         expect(base32Result).toBeDefined();
         expect(base32Result!.data).toBe('Hello World!');
+    });
+
+    it('XXencode 应被检测', () => {
+        const enc = baseXXEncode(toBytes('Hello'));
+        const results = autoDetect(enc);
+        // 应包含 + 或 - 等特征字符
+        const xx = results.find(r => r.variant === 'baseXX');
+        expect(xx).toBeDefined();
+        expect(xx!.data).toBe('Hello');
     });
 
     it('Base58 应被检测（至少出现在结果中）', () => {

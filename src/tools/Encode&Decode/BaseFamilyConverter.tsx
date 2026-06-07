@@ -11,7 +11,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 
 // ─── Base 系列编码类型 ───────────────────────────────────
 
-type BaseVariant = 'base16' | 'base32' | 'base58' | 'base62' | 'base64';
+type BaseVariant = 'base16' | 'base32' | 'base58' | 'base62' | 'base64' | 'baseXX';
 
 interface BaseInfo {
     label: string;
@@ -25,6 +25,7 @@ const BASE_INFO: Record<BaseVariant, BaseInfo> = {
     base58: { label: 'Base58', alphabet: '1-9 A-Z a-z(去 0OIl)', description: 'Bitcoin 地址' },
     base62: { label: 'Base62', alphabet: '0-9 A-Z a-z', description: '纯字母数字' },
     base64: { label: 'Base64', alphabet: 'A-Z a-z 0-9 +/ =', description: 'RFC 4648' },
+    baseXX: { label: 'XXencode', alphabet: '+-0-9 A-Z a-z', description: 'Base64 变体（Unix）' },
 };
 
 // ─── 编码算法 ─────────────────────────────────────────────
@@ -35,6 +36,7 @@ const ALPHABETS = {
     base58: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz',
     base62: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
     base64: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
+    baseXX: '+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
 } as const;
 
 /** string → Uint8Array (UTF-8) */
@@ -223,6 +225,52 @@ function base64Decode(s: string): Uint8Array | null {
     } catch { return null; }
 }
 
+// ── XXencode ──
+function baseXXEncode(bytes: Uint8Array): string {
+    const alpha = ALPHABETS.baseXX;
+    let result = '';
+    for (let i = 0; i < bytes.length; i += 3) {
+        const b = [bytes[i] ?? 0, bytes[i + 1] ?? 0, bytes[i + 2] ?? 0];
+        const remaining = bytes.length - i;
+        const b0 = b[0]!, b1 = b[1]!, b2 = b[2]!;
+
+        let group = '';
+        group += alpha[b0 >> 2];
+        group += alpha[((b0 & 0x03) << 4) | (b1 >> 4)];
+        group += alpha[((b1 & 0x0F) << 2) | (b2 >> 6)];
+        group += alpha[b2 & 0x3F];
+
+        if (remaining < 3) {
+            const keep = remaining === 1 ? 2 : 3;
+            group = group.slice(0, keep) + '='.repeat(4 - keep);
+        }
+        result += group;
+    }
+    return result;
+}
+
+function baseXXDecode(s: string): Uint8Array | null {
+    const alpha = ALPHABETS.baseXX;
+    const clean = s.replace(/\s/g, '');
+    if (!clean) return new Uint8Array(0);
+    if (!/^[+\-0-9A-Za-z=]*$/.test(clean) || clean.length % 4 !== 0) return null;
+
+    const bytes: number[] = [];
+    for (let i = 0; i < clean.length; i += 4) {
+        const chunk = clean.slice(i, i + 4);
+        const pad = (chunk.match(/=/g) || []).length;
+        if (pad === 4) break;
+
+        const vals = [...chunk].map(c => c === '=' ? 0 : alpha.indexOf(c));
+        if (vals.some(v => v === -1)) return null;
+
+        bytes.push((vals[0] << 2) | (vals[1] >> 4));
+        if (pad < 2) bytes.push((vals[1] << 4) | (vals[2] >> 2));
+        if (pad < 1) bytes.push((vals[2] << 6) | vals[3]);
+    }
+    return Uint8Array.from(bytes);
+}
+
 // ─── 编码器映射 ───────────────────────────────────────────
 
 interface Encoders {
@@ -236,6 +284,7 @@ const ENCODERS: Record<BaseVariant, Encoders> = {
     base58: { encode: base58Encode, decode: base58Decode },
     base62: { encode: base62Encode, decode: base62Decode },
     base64: { encode: base64Encode, decode: base64Decode },
+    baseXX: { encode: baseXXEncode, decode: baseXXDecode },
 };
 
 // ─── 自动检测 ─────────────────────────────────────────────
@@ -301,6 +350,13 @@ function autoDetect(input: string): AutoDetectResult[] {
                 const goodLength = clean.replace(/\s/g, '').length % 4 === 0;
                 score = (hasPadding ? 40 : 20) + (goodLength ? 15 : 0) + textRatio * 30;
                 reason = `Base64${hasPadding ? ' 含填充' : ''}${goodLength ? ' 对齐' : ''}，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'baseXX') {
+            if (/^[+\-0-9A-Za-z=\s]+$/.test(clean)) {
+                const hasDash = clean.includes('-');
+                const hasPlus = clean.includes('+');
+                score = (hasDash || hasPlus ? 35 : 15) + textRatio * 35;
+                reason = `XXencode 字符集${hasDash ? ' 含-' : ''}，可读率 ${(textRatio * 100).toFixed(0)}%`;
             }
         }
 
