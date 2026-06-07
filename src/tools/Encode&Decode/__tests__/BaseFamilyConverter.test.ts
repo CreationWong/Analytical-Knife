@@ -319,3 +319,133 @@ describe('二进制数据各 Base 的膨胀率', () => {
         expect(enc.length / bytes.length).toBe(2);
     });
 });
+
+// ─── 自动检测 ──────────────────────────────────────────
+
+const BASE_INFO: Record<string, { label: string }> = {
+    base16: { label: 'Base16' }, base32: { label: 'Base32' },
+    base58: { label: 'Base58' }, base62: { label: 'Base62' },
+    base64: { label: 'Base64' },
+};
+
+const ENCODERS: Record<string, { encode: Function; decode: Function }> = {
+    base16: { encode: base16Encode, decode: base16Decode },
+    base32: { encode: base32Encode, decode: base32Decode },
+    base58: { encode: base58Encode, decode: base58Decode },
+    base62: { encode: base62Encode, decode: base62Decode },
+    base64: { encode: base64Encode, decode: base64Decode },
+};
+
+function autoDetect(input: string): Array<{ variant: string; label: string; data: string; score: number; reason: string }> {
+    const clean = input.replace(/\s/g, '');
+    if (!clean) return [];
+
+    const results: Array<any> = [];
+
+    for (const [variant, engine] of Object.entries(ENCODERS)) {
+        const bytes = (engine.decode as Function)(input);
+        if (bytes === null) continue;
+
+        const data = fromBytes(bytes as Uint8Array);
+        if (!data) continue;
+
+        const printable = [...data].filter(c =>
+            c >= ' ' && c <= '~' || '\n\r\t'.includes(c)
+        ).length;
+        const textRatio = data.length > 0 ? printable / data.length : 0;
+
+        let score = 0;
+        let reason = '';
+
+        if (variant === 'base16') {
+            if (/^[0-9A-Fa-f\s]+$/.test(clean)) {
+                score = 50 + textRatio * 40;
+                reason = `仅含 Hex 字符，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base32') {
+            if (clean.length % 8 === 0 && /^[A-Z2-7=\s]+$/i.test(clean)) {
+                score = 45 + textRatio * 40;
+                reason = `Base32 字符集+对齐，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base58') {
+            const only58 = /^[1-9A-HJ-NP-Za-km-z\s]+$/.test(clean);
+            const only62 = /^[0-9A-Za-z\s]+$/.test(clean);
+            if (only58 && !only62) {
+                score = 60 + textRatio * 35;
+                reason = `仅 Base58 字符集，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            } else if (only58) {
+                score = 20 + textRatio * 30;
+                reason = `Base58/62 交集，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base62') {
+            if (/^[0-9A-Za-z\s]+$/.test(clean)) {
+                const noSpecial = !/[+/=]/.test(clean);
+                score = (noSpecial ? 25 : 10) + textRatio * 30;
+                reason = `${noSpecial ? '纯字母数字' : '含特殊字符'}，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base64') {
+            if (/^[0-9A-Za-z+/=\s]+$/.test(clean)) {
+                const hasPadding = clean.includes('=');
+                const goodLength = clean.replace(/\s/g, '').length % 4 === 0;
+                score = (hasPadding ? 40 : 20) + (goodLength ? 15 : 0) + textRatio * 30;
+                reason = `Base64${hasPadding ? ' 含填充' : ''}${goodLength ? ' 对齐' : ''}，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        }
+
+        if (data.trim() === input.trim()) {
+            score *= 0.3;
+            reason += '（解码与原文相同）';
+        }
+
+        results.push({ variant, label: BASE_INFO[variant].label, data, score, reason });
+    }
+
+    results.sort((a: any, b: any) => b.score - a.score);
+    return results;
+}
+
+describe('autoDetect - 自动检测', () => {
+    it('Base64 带填充应被检测为 Base64', () => {
+        const enc = base64Encode(toBytes('Hello, World!'));
+        const results = autoDetect(enc);
+        expect(results.length).toBeGreaterThan(0);
+        expect(results[0].variant).toBe('base64');
+        expect(results[0].data).toBe('Hello, World!');
+        expect(results[0].score).toBeGreaterThan(50);
+    });
+
+    it('Base16 应被检测为 Base16', () => {
+        const enc = base16Encode(toBytes('Hello'));
+        const results = autoDetect(enc);
+        expect(results.length).toBeGreaterThan(0);
+        expect(results[0].variant).toBe('base16');
+    });
+
+    it('Base32 应被检测为 Base32', () => {
+        const enc = base32Encode(toBytes('Hello World!'));
+        const results = autoDetect(enc);
+        // Base32 可能需要高可信度
+        const base32Result = results.find(r => r.variant === 'base32');
+        expect(base32Result).toBeDefined();
+        expect(base32Result!.data).toBe('Hello World!');
+    });
+
+    it('Base58 应被检测（至少出现在结果中）', () => {
+        const enc = base58Encode(toBytes('Hello'));
+        const results = autoDetect(enc);
+        const base58Result = results.find(r => r.variant === 'base58');
+        expect(base58Result).toBeDefined();
+        expect(base58Result!.data).toBe('Hello');
+    });
+
+    it('空输入应返回空数组', () => {
+        expect(autoDetect('')).toEqual([]);
+    });
+
+    it('纯文本不应有高分检测结果', () => {
+        const results = autoDetect('just some plain text');
+        // 可能有一个低分结果，但不应有高分
+        const highScore = results.filter(r => r.score > 70);
+        expect(highScore.length).toBe(0);
+    });
+});

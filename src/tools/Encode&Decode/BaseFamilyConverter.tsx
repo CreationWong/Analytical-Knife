@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
     Stack, Textarea, Title, Group, ActionIcon,
     Tooltip, CopyButton, Space, Text, Paper, Divider, Box, Button,
-    SegmentedControl, Select,
+    SegmentedControl, Select, Badge, Collapse,
 } from '@mantine/core';
-import { IconCopy, IconCheck, IconExchange, IconTrash } from '@tabler/icons-react';
+import { useDisclosure } from '@mantine/hooks';
+import { IconCopy, IconCheck, IconExchange, IconTrash, IconSearch, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { showNotification } from '@/utils/notifications';
 import { useAppSettings } from '@/hooks/useAppSettings';
 
@@ -237,6 +238,84 @@ const ENCODERS: Record<BaseVariant, Encoders> = {
     base64: { encode: base64Encode, decode: base64Decode },
 };
 
+// ─── 自动检测 ─────────────────────────────────────────────
+
+interface AutoDetectResult {
+    variant: BaseVariant;
+    label: string;
+    data: string;
+    score: number;
+    reason: string;
+}
+
+function autoDetect(input: string): AutoDetectResult[] {
+    const clean = input.replace(/\s/g, '');
+    if (!clean) return [];
+
+    const results: AutoDetectResult[] = [];
+
+    for (const [variant, engine] of Object.entries(ENCODERS)) {
+        const bytes = engine.decode(input);
+        if (bytes === null) continue;
+
+        const data = fromBytes(bytes);
+        if (!data) continue;
+
+        const printable = [...data].filter(c =>
+            c >= ' ' && c <= '~' || '\n\r\t'.includes(c)
+        ).length;
+        const textRatio = data.length > 0 ? printable / data.length : 0;
+
+        let score = 0;
+        let reason = '';
+
+        if (variant === 'base16') {
+            if (/^[0-9A-Fa-f\s]+$/.test(clean)) {
+                score = 50 + textRatio * 40;
+                reason = `仅含 Hex 字符，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base32') {
+            if (clean.length % 8 === 0 && /^[A-Z2-7=\s]+$/i.test(clean)) {
+                score = 45 + textRatio * 40;
+                reason = `Base32 字符集+对齐，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base58') {
+            const only58 = /^[1-9A-HJ-NP-Za-km-z\s]+$/.test(clean);
+            const only62 = /^[0-9A-Za-z\s]+$/.test(clean);
+            if (only58 && !only62) {
+                score = 60 + textRatio * 35;
+                reason = `仅 Base58 字符集（无 0OIl），可读率 ${(textRatio * 100).toFixed(0)}%`;
+            } else if (only58) {
+                score = 20 + textRatio * 30;
+                reason = `Base58/62 交集，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base62') {
+            if (/^[0-9A-Za-z\s]+$/.test(clean)) {
+                const noSpecial = !/[+/=]/.test(clean);
+                score = (noSpecial ? 25 : 10) + textRatio * 30;
+                reason = `${noSpecial ? '纯字母数字' : '含特殊字符'}，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        } else if (variant === 'base64') {
+            if (/^[0-9A-Za-z+/=\s]+$/.test(clean)) {
+                const hasPadding = clean.includes('=');
+                const goodLength = clean.replace(/\s/g, '').length % 4 === 0;
+                score = (hasPadding ? 40 : 20) + (goodLength ? 15 : 0) + textRatio * 30;
+                reason = `Base64${hasPadding ? ' 含填充' : ''}${goodLength ? ' 对齐' : ''}，可读率 ${(textRatio * 100).toFixed(0)}%`;
+            }
+        }
+
+        if (data.trim() === input.trim()) {
+            score *= 0.3;
+            reason += '（解码与原文相同）';
+        }
+
+        results.push({ variant: variant as BaseVariant, label: BASE_INFO[variant as BaseVariant].label, data, score, reason });
+    }
+
+    results.sort((a, b) => b.score - a.score);
+    return results;
+}
+
 // ─── UI 组件 ──────────────────────────────────────────────
 
 export default function BaseFamilyConverter() {
@@ -244,6 +323,9 @@ export default function BaseFamilyConverter() {
     const [input, setInput] = useState('');
     const [mode, setMode] = useState<'encode' | 'decode'>('encode');
     const [variant, setVariant] = useState<BaseVariant>('base64');
+    const [detectResults, setDetectResults] = useState<AutoDetectResult[]>([]);
+    const [detecting, setDetecting] = useState(false);
+    const [detectOpened, { toggle: toggleDetect, open: openDetect }] = useDisclosure(false);
 
     const info = BASE_INFO[variant];
     const engine = ENCODERS[variant];
@@ -272,6 +354,29 @@ export default function BaseFamilyConverter() {
         }
     };
 
+    const handleDetect = useCallback(() => {
+        if (!input.trim()) return;
+        setDetecting(true);
+        // 给 UI 更新机会
+        setTimeout(() => {
+            const results = autoDetect(input);
+            setDetectResults(results);
+            setDetecting(false);
+            if (results.length > 0) {
+                openDetect();
+                // 自动选择最佳匹配
+                setVariant(results[0].variant);
+                setMode('decode');
+                showNotification({
+                    type: 'info',
+                    message: `检测到 ${results[0].label}（可信度 ${results[0].score.toFixed(0)}%）`,
+                });
+            } else {
+                showNotification({ type: 'error', message: '未能识别出任何已知的 Base 编码' });
+            }
+        }, 50);
+    }, [input]);
+
     const getByteSize = (s: string) => toBytes(s).length;
 
     const variants = Object.entries(BASE_INFO).map(([key, v]) => ({
@@ -295,14 +400,25 @@ export default function BaseFamilyConverter() {
                     />
                 </Group>
 
-                <Select
-                    size="xs"
-                    data={variants}
-                    value={variant}
-                    onChange={(v) => v && setVariant(v as BaseVariant)}
-                    mb="sm"
-                    comboboxProps={{ shadow: 'md' }}
-                />
+                <Group gap="xs" align="end" mb="sm">
+                    <Select
+                        size="xs"
+                        data={variants}
+                        value={variant}
+                        onChange={(v) => v && setVariant(v as BaseVariant)}
+                        style={{ flex: 1 }}
+                        comboboxProps={{ shadow: 'md' }}
+                    />
+                    {mode === 'decode' && (
+                        <Button size="xs" variant="light" color="violet"
+                            leftSection={<IconSearch size={14} />}
+                            onClick={handleDetect}
+                            loading={detecting}
+                        >
+                            自动检测
+                        </Button>
+                    )}
+                </Group>
 
                 <Group gap="xs" mb="xs">
                     <Text size="xs" c="dimmed">{info.alphabet}</Text>
@@ -339,6 +455,37 @@ export default function BaseFamilyConverter() {
                     <Space style={{ flex: 1 }} />
                 </Group>
             </Paper>
+
+            {/* 自动检测结果 */}
+            {detectResults.length > 0 && (
+                <Paper withBorder p="xs" bg="var(--mantine-color-violet-light)">
+                    <Group gap="xs" mb="xs">
+                        <Text size="sm" fw={600}>自动检测结果</Text>
+                        <ActionIcon size="sm" variant="subtle" onClick={toggleDetect}>
+                            {detectOpened ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+                        </ActionIcon>
+                    </Group>
+                    <Collapse in={detectOpened}>
+                        <Stack gap={4}>
+                            {detectResults.map((r, i) => (
+                                <Group key={r.variant} gap="xs" wrap="nowrap"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => { setVariant(r.variant); setInput(r.data); setMode('decode'); }}
+                                >
+                                    <Badge size="sm" color={i === 0 ? 'violet' : 'gray'} variant={i === 0 ? 'filled' : 'outline'}>
+                                        {r.label}
+                                    </Badge>
+                                    <Text size="xs" c="dimmed" style={{ flex: 1 }} truncate>{r.reason}</Text>
+                                    <Text size="xs" fw={700} c={r.score > 60 ? 'green' : 'orange'}>
+                                        {r.score.toFixed(0)}%
+                                    </Text>
+                                    {i === 0 && <Badge size="xs" color="violet" variant="light">推荐</Badge>}
+                                </Group>
+                            ))}
+                        </Stack>
+                    </Collapse>
+                </Paper>
+            )}
 
             <Paper p="md" withBorder bg="var(--mantine-color-default-hover)">
                 <Group justify="space-between" mb="xs">
