@@ -1,26 +1,35 @@
 import { useState, useMemo } from 'react';
 import {
     Stack, Button, Textarea, Table, Paper, ScrollArea, Badge, Group, Text,
-    Autocomplete, Modal, Code, Tabs, ActionIcon
+    Autocomplete, Modal, Code, Tabs, ActionIcon,
 } from '@mantine/core';
 import {
     IconFileSearch, IconFileUpload, IconFilter, IconTerminal,
-    IconInfoCircle, IconTrash, IconChevronRight, IconCommand
+    IconInfoCircle, IconTrash, IconChevronRight, IconCommand,
+    IconArrowsRightLeft,
 } from '@tabler/icons-react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useDisclosure } from '@mantine/hooks';
-import { handleAppError } from '../../utils/error';
-import { useAppSettings } from '../../hooks/useAppSettings';
+import { handleAppError } from '@/utils/error';
+import { useAppSettings } from '@/hooks/useAppSettings.ts';
 
 interface LogEntry {
     ip: string;
+    remote_user: string;
     timestamp: string;
     method: string;
     path: string;
     status: string;
     size: string;
+    referer: string;
     ua: string;
+    x_forwarded_for: string;
+    request_time: string;
+    upstream_response_time: string;
+    scheme: string;
+    host: string;
+    server_protocol: string;
     raw: string;
 }
 
@@ -33,13 +42,23 @@ export default function LogAnalyzer() {
     const [selectedEntry, setSelectedEntry] = useState<LogEntry | null>(null);
     const [opened, { open: openModal, close: closeModal }] = useDisclosure(false);
 
+    // --- 检测数据是否为扩展格式 ---
+    const hasExtended = useMemo(() =>
+        data.some(e => e.host || e.request_time || e.x_forwarded_for),
+        [data],
+    );
+
     // --- Wireshark 过滤器提示数据 ---
     const suggestions = [
         { value: 'ip', description: 'IP 地址' },
+        { value: 'host', description: '主机名（扩展格式）' },
         { value: 'http.status', description: 'HTTP 状态码' },
         { value: 'http.method', description: '请求方法' },
         { value: 'http.uri contains ""', description: 'URL 包含关键词' },
         { value: 'frame.time', description: '时间访问' },
+        { value: 'request_time >', description: '请求耗时 >' },
+        { value: 'scheme', description: '协议（http/https）' },
+        { value: 'x_forwarded_for', description: '真实客户端 IP' },
     ];
 
     // --- 过滤器解析引擎 ---
@@ -56,6 +75,14 @@ export default function LogAnalyzer() {
                     if (c.includes('http.uri contains')) return item.path.toLowerCase().includes(c.split('contains')[1].trim().replace(/"/g, ''));
                     if (c.includes('frame.time >')) return item.timestamp > c.split('>')[1].trim().replace(/"/g, '');
                     if (c.includes('frame.time <')) return item.timestamp < c.split('<')[1].trim().replace(/"/g, '');
+                    if (c.includes('host ==')) return item.host.toLowerCase() === c.split('==')[1].trim().replace(/"/g, '');
+                    if (c.includes('request_time >')) {
+                        const val = parseFloat(c.split('>')[1].trim());
+                        const entry = parseFloat(item.request_time);
+                        return !isNaN(entry) && !isNaN(val) && entry > val;
+                    }
+                    if (c.includes('scheme ==')) return item.scheme.toLowerCase() === c.split('==')[1].trim().replace(/"/g, '');
+                    if (c.includes('x_forwarded_for')) return item.x_forwarded_for.includes(c.split('==')[1]?.trim().replace(/"/g, '') || c.split('contains')[1]?.trim().replace(/"/g, ''));
                     // 默认匹配路径或原始日志
                     return item.path.toLowerCase().includes(c) || item.raw.toLowerCase().includes(c);
                 };
@@ -111,7 +138,14 @@ export default function LogAnalyzer() {
                                 </ActionIcon>
                             )}
                         </Group>
-                        <Button size="xs" color={settings.primaryColor} leftSection={<IconFileSearch size={14} />} onClick={() => onHandleParse(rawText)} loading={loading}>立即分析</Button>
+                        <Group gap="xs">
+                            {data.length > 0 && (
+                                <Text size="xs" c="dimmed">
+                                    {hasExtended ? '扩展格式' : '标准格式'} · {data.length} 条
+                                </Text>
+                            )}
+                            <Button size="xs" color={settings.primaryColor} leftSection={<IconFileSearch size={14} />} onClick={() => onHandleParse(rawText)} loading={loading}>立即分析</Button>
+                        </Group>
                     </Group>
                 </Stack>
             </Paper>
@@ -142,33 +176,75 @@ export default function LogAnalyzer() {
                                 <Table.Thead bg="var(--mantine-color-body)">
                                     <Table.Tr style={{ fontSize: '12px' }}>
                                         <Table.Th w={165}>时间 / 来源 IP</Table.Th>
-                                        <Table.Th w={75}>方法</Table.Th>
+                                        <Table.Th w={90}>方法</Table.Th>
                                         <Table.Th>请求路径</Table.Th>
-                                        <Table.Th w={85}>状态</Table.Th>
+                                        <Table.Th w={80}>状态</Table.Th>
+                                        <Table.Th w={70}>大小</Table.Th>
+                                        {hasExtended && <Table.Th w={90}>耗时</Table.Th>}
+                                        {hasExtended && <Table.Th w={130}>Host</Table.Th>}
                                         <Table.Th w={40}></Table.Th>
                                     </Table.Tr>
                                 </Table.Thead>
                                 <Table.Tbody>
-                                    {filteredData.map((item, i) => (
-                                        <Table.Tr key={i} onClick={() => { setSelectedEntry(item); openModal(); }} style={{ cursor: 'pointer' }}>
-                                            <Table.Td>
-                                                <Text size="xs" fw={700} c={settings.primaryColor} truncate>{item.ip}</Text>
-                                                <Text size="10px" c="dimmed" truncate>{item.timestamp}</Text>
-                                            </Table.Td>
-                                            <Table.Td>
-                                                <Badge size="xs" radius="xs" variant="light" fullWidth>{item.method}</Badge>
-                                            </Table.Td>
-                                            <Table.Td>
-                                                <Text size="xs" ff="monospace" truncate>{item.path}</Text>
-                                            </Table.Td>
-                                            <Table.Td>
-                                                <Badge size="xs" fullWidth color={item.status.startsWith('2') ? 'green' : 'red'} variant="filled">
-                                                    {item.status}
-                                                </Badge>
-                                            </Table.Td>
-                                            <Table.Td><IconChevronRight size={14} style={{ opacity: 0.3 }} /></Table.Td>
-                                        </Table.Tr>
-                                    ))}
+                                    {filteredData.map((item, i) => {
+                                        const hasRealIp = !!item.x_forwarded_for && item.x_forwarded_for !== item.ip;
+                                        return (
+                                            <Table.Tr key={i} onClick={() => { setSelectedEntry(item); openModal(); }}
+                                                style={{ cursor: 'pointer' }}
+                                                bg={hasRealIp ? 'var(--mantine-color-yellow-light)' : undefined}
+                                            >
+                                                <Table.Td>
+                                                    <Text size="xs" fw={700} c={settings.primaryColor} truncate>
+                                                        {hasRealIp ? item.x_forwarded_for : item.ip}
+                                                    </Text>
+                                                    {hasRealIp ? (
+                                                        <>
+                                                            <Text size="10px" c="dimmed" truncate>{item.timestamp}</Text>
+                                                            <Text size="10px" c="orange" truncate>代理: {item.ip}</Text>
+                                                        </>
+                                                    ) : (
+                                                        <Text size="10px" c="dimmed" truncate>{item.timestamp}</Text>
+                                                    )}
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Badge size="xs" radius="xs" variant="light" fullWidth>{item.method}</Badge>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Text size="xs" ff="monospace" truncate>{item.path}</Text>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Badge size="xs" fullWidth color={item.status.startsWith('2') ? 'green' : item.status.startsWith('3') ? 'yellow' : 'red'} variant="filled"
+                                                        styles={{ label: { fontFamily: 'monospace', fontWeight: 700 } }}>
+                                                        {item.status}
+                                                    </Badge>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Text size="xs" ff="monospace" c="dimmed">
+                                                        {item.size && item.size !== '-' ? formatSize(item.size) : '-'}
+                                                    </Text>
+                                                </Table.Td>
+                                                {hasExtended && (
+                                                    <Table.Td>
+                                                        {item.request_time ? (
+                                                            <Text size="xs" ff="monospace" c={parseFloat(item.request_time) > 1 ? 'red' : 'dimmed'}>
+                                                                {item.request_time}s
+                                                            </Text>
+                                                        ) : (
+                                                            <Text size="xs" c="dimmed">-</Text>
+                                                        )}
+                                                    </Table.Td>
+                                                )}
+                                                {hasExtended && (
+                                                    <Table.Td>
+                                                        <Text size="xs" ff="monospace" truncate c="dimmed">
+                                                            {item.host || (item.scheme ? `${item.scheme}://...` : '-')}
+                                                        </Text>
+                                                    </Table.Td>
+                                                )}
+                                                <Table.Td><IconChevronRight size={14} style={{ opacity: 0.3 }} /></Table.Td>
+                                            </Table.Tr>
+                                        );
+                                    })}
                                 </Table.Tbody>
                             </Table>
                         </ScrollArea>
@@ -183,16 +259,56 @@ export default function LogAnalyzer() {
                         <Tabs.List mb="md">
                             <Tabs.Tab value="structured" leftSection={<IconInfoCircle size={14} />}>结构化详情</Tabs.Tab>
                             <Tabs.Tab value="raw" leftSection={<IconTerminal size={14} />}>原始日志行</Tabs.Tab>
+                            <Tabs.Tab value="headers" leftSection={<IconArrowsRightLeft size={14} />}>请求头信息</Tabs.Tab>
                         </Tabs.List>
 
                         <Tabs.Panel value="structured">
                             <Stack gap="xs">
                                 <DetailRow label="访问时间" value={selectedEntry.timestamp} />
-                                <DetailRow label="客户端 IP" value={selectedEntry.ip} />
+                                <DetailRow
+                                    label="客户端 IP"
+                                    value={selectedEntry.x_forwarded_for || selectedEntry.ip}
+                                    sub={selectedEntry.x_forwarded_for && selectedEntry.x_forwarded_for !== selectedEntry.ip
+                                        ? `原始 IP: ${selectedEntry.ip}` : undefined}
+                                />
+                                {selectedEntry.remote_user && (
+                                    <DetailRow label="认证用户" value={selectedEntry.remote_user} />
+                                )}
                                 <DetailRow label="请求方法" value={selectedEntry.method} />
-                                <DetailRow label="响应状态" value={selectedEntry.status} color={selectedEntry.status.startsWith('2') ? 'green' : 'red'} />
+                                <DetailRow label="响应状态" value={selectedEntry.status}
+                                    color={selectedEntry.status.startsWith('2') ? 'green' : selectedEntry.status.startsWith('3') ? 'yellow' : 'red'} />
+                                <DetailRow label="响应大小" value={selectedEntry.size !== '-' ? formatSize(selectedEntry.size) : '-'} />
                                 <DetailRow label="解码路径" value={selectedEntry.path} isCode />
+
+                                {selectedEntry.request_time && (
+                                    <DetailRow label="请求耗时" value={`${selectedEntry.request_time}s`}
+                                        color={parseFloat(selectedEntry.request_time) > 1 ? 'red' : undefined} />
+                                )}
+                                {selectedEntry.upstream_response_time && (
+                                    <DetailRow label="上游响应时间" value={`${selectedEntry.upstream_response_time}s`} />
+                                )}
+                            </Stack>
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value="headers">
+                            <Stack gap="xs">
                                 <DetailRow label="User-Agent" value={selectedEntry.ua} isCode />
+                                <DetailRow label="Referer" value={selectedEntry.referer} isCode />
+                                {selectedEntry.x_forwarded_for && (
+                                    <DetailRow label="X-Forwarded-For" value={selectedEntry.x_forwarded_for} />
+                                )}
+                                {selectedEntry.host && (
+                                    <DetailRow label="Host" value={selectedEntry.host} />
+                                )}
+                                {selectedEntry.scheme && (
+                                    <DetailRow label="Scheme" value={selectedEntry.scheme} />
+                                )}
+                                {selectedEntry.server_protocol && (
+                                    <DetailRow label="Server Protocol" value={selectedEntry.server_protocol} />
+                                )}
+                                {selectedEntry.size && selectedEntry.size !== '-' && (
+                                    <DetailRow label="Body Bytes" value={`${selectedEntry.size} B`} />
+                                )}
                             </Stack>
                         </Tabs.Panel>
 
@@ -208,15 +324,29 @@ export default function LogAnalyzer() {
     );
 }
 
-function DetailRow({ label, value, isCode, color }: { label: string, value: string, isCode?: boolean, color?: string }) {
+function DetailRow({ label, value, sub, isCode, color }: {
+    label: string; value: string; sub?: string; isCode?: boolean; color?: string;
+}) {
     return (
         <Group wrap="nowrap" align="start">
-            <Text size="xs" fw={700} w={100} c="dimmed" style={{ flexShrink: 0 }}>{label.toUpperCase()}</Text>
-            {isCode ? (
-                <Code style={{ flex: 1, fontSize: '12px', wordBreak: 'break-all' }}>{value}</Code>
-            ) : (
-                <Text size="sm" fw={500} c={color}>{value}</Text>
-            )}
+            <Text size="xs" fw={700} w={110} c="dimmed" style={{ flexShrink: 0 }}>{label.toUpperCase()}</Text>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                {isCode ? (
+                    <Code style={{ fontSize: '12px', wordBreak: 'break-all' }}>{value}</Code>
+                ) : (
+                    <Text size="sm" fw={500} c={color} truncate="end">{value}</Text>
+                )}
+                {sub && <Text size="10px" c="dimmed">{sub}</Text>}
+            </div>
         </Group>
     );
+}
+
+/** 格式化字节数为可读形式 */
+function formatSize(bytes: string): string {
+    const n = parseInt(bytes, 10);
+    if (isNaN(n)) return bytes;
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 }
