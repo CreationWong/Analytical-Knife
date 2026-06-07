@@ -7,7 +7,7 @@ import {
     IconInfoCircle,
     IconKey,
     IconListCheck, IconLockAccess,
-    IconLockCode, IconLockOpen, IconPhotoScan, IconReplace, IconSettings,
+    IconLockCode, IconLockOpen, IconNumber, IconPhotoScan, IconReplace, IconSettings,
     IconTerminal2, IconTools, IconVideo, IconWaveSine
 } from "@tabler/icons-react";
 
@@ -61,12 +61,12 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
     },
 
     {
-        id: 'base64',
-        name: 'Base64 转换',
-        description: '字符串与 Base64 互转',
-        icon: IconLockCode,
-        path: '编码处理/Base/base64',
-        component: lazy(() => import('../tools/Encode&Decode/Base64Tool')),
+        id: 'baseFamily',
+        name: 'Base 家族转换器',
+        description: 'Base16/32/58/62/64 互转',
+        icon: IconNumber,
+        path: '编码处理/Base/baseFamily',
+        component: lazy(() => import('../tools/Encode&Decode/BaseFamilyConverter')),
     },
 
     {

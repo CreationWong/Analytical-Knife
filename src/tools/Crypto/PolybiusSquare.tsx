@@ -5,7 +5,7 @@ import {
     NumberInput,
 } from '@mantine/core';
 import { IconKey, IconLock, IconLockOpen, IconCopy, IconCheck, IconTable } from '@tabler/icons-react';
-import { useAppSettings } from '../../hooks/useAppSettings';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 // ─── 核心算法 ─────────────────────────────────────────────
 
