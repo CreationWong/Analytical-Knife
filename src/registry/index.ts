@@ -3,7 +3,7 @@ import { ToolDefinition } from './types';
 import {
     IconBrush,
     IconBug, IconChartBar,
-    IconCode, IconFileAnalytics, IconFilter, IconGhost, IconHeartHandshake, IconImageInPicture,
+    IconCode, IconFileAnalytics, IconFilter, IconGhost, IconGridDots, IconHeartHandshake, IconImageInPicture,
     IconInfoCircle,
     IconKey,
     IconListCheck, IconLockAccess,
@@ -130,6 +130,15 @@ export const TOOLS_REGISTRY: ToolDefinition[] = [
         icon: IconLockAccess,
         path: '密码学/ROT/caesarCipher',
         component: lazy(() => import('../tools/Crypto/CaesarCipher.tsx')),
+    },
+
+    {
+        id: 'polybiusSquare',
+        name: '波利比奥斯方阵',
+        description: 'Polybius 5×5 网格加解密',
+        icon: IconGridDots,
+        path: '密码学/polybiusSquare',
+        component: lazy(() => import('../tools/Crypto/PolybiusSquare.tsx')),
     },
 
     {
